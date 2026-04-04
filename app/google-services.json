@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "924692268627",
+    "project_id": "nurungji-33f8c",
+    "storage_bucket": "nurungji-33f8c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:924692268627:android:98d9fa3301dba87c9ae8a6",
+        "android_client_info": {
+          "package_name": "com.example.nurungji"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDYngR8gfMitUYEb-j38a7vIQOcoCi5PgQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
