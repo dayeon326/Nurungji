@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Nurungji</string>
+
+    <string name="default_web_client_id">
+        924692268627-epdcoprkm0tq4hvku5vn51483chnr3cq.apps.googleusercontent.com
+    </string>
 </resources>

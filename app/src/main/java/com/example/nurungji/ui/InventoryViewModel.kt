@@ -3,6 +3,7 @@ package com.example.nurungji.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.nurungji.data.InventoryItem
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,7 +24,16 @@ class InventoryViewModel : ViewModel() {
     fun loadInventory() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                val uid = FirebaseAuth.getInstance().currentUser?.uid
+
+                if (uid == null) {
+                    _errorMessage.value = "로그인한 사용자 정보가 없습니다."
+                    _inventoryItems.value = emptyList()
+                    return@launch
+                }
+
                 val snapshot = db.collection("inventory")
+                    .whereEqualTo("userId", uid)
                     .get()
                     .await()
 
@@ -32,6 +42,38 @@ class InventoryViewModel : ViewModel() {
                 }
 
                 _inventoryItems.value = items
+                _errorMessage.value = null
+
+            } catch (e: Exception) {
+                _errorMessage.value = e.message
+            }
+        }
+    }
+
+    fun addInventory(itemName: String, category: String, quantity: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val uid = FirebaseAuth.getInstance().currentUser?.uid
+
+                if (uid == null) {
+                    _errorMessage.value = "로그인한 사용자 정보가 없습니다."
+                    return@launch
+                }
+
+                val item = InventoryItem(
+                    itemName = itemName,
+                    category = category,
+                    quantity = quantity,
+                    userId = uid
+                )
+
+                db.collection("inventory")
+                    .add(item)
+                    .await()
+
+                loadInventory()
+                _errorMessage.value = null
+
             } catch (e: Exception) {
                 _errorMessage.value = e.message
             }

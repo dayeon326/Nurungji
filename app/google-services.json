@@ -12,7 +12,20 @@
           "package_name": "com.example.nurungji"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "924692268627-9u4l8790vf6n7q275qjif8tt11ebbr1j.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.nurungji",
+            "certificate_hash": "c2c2ac09be819223700d7eefb17912186145b8a3"
+          }
+        },
+        {
+          "client_id": "924692268627-epdcoprkm0tq4hvku5vn51483chnr3cq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDYngR8gfMitUYEb-j38a7vIQOcoCi5PgQ"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "924692268627-epdcoprkm0tq4hvku5vn51483chnr3cq.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
