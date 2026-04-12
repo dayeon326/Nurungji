@@ -38,7 +38,8 @@ class InventoryViewModel : ViewModel() {
                     .await()
 
                 val items = snapshot.documents.mapNotNull { document ->
-                    document.toObject(InventoryItem::class.java)
+                    val item = document.toObject(InventoryItem::class.java)
+                    item?.copy(documentId = document.id)
                 }
 
                 _inventoryItems.value = items
@@ -69,6 +70,23 @@ class InventoryViewModel : ViewModel() {
 
                 db.collection("inventory")
                     .add(item)
+                    .await()
+
+                loadInventory()
+                _errorMessage.value = null
+
+            } catch (e: Exception) {
+                _errorMessage.value = e.message
+            }
+        }
+    }
+
+    fun deleteInventory(documentId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                db.collection("inventory")
+                    .document(documentId)
+                    .delete()
                     .await()
 
                 loadInventory()

@@ -39,6 +39,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
+import java.nio.file.WatchEvent
 
 class MainActivity : ComponentActivity() {
 
@@ -249,7 +250,12 @@ fun InventoryScreen(
         } else {
             LazyColumn {
                 items(inventoryItems) { item ->
-                    InventoryItemCard(item)
+                    InventoryItemCard(
+                        item=item,
+                        onDelete= {
+                            viewModel.deleteInventory(item.documentId)
+                        }
+                    )
                 }
             }
         }
@@ -257,7 +263,10 @@ fun InventoryScreen(
 }
 
 @Composable
-fun InventoryItemCard(item: InventoryItem) {
+fun InventoryItemCard(
+    item: InventoryItem,
+    onDelete: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -267,5 +276,11 @@ fun InventoryItemCard(item: InventoryItem) {
         Text(text = "카테고리: ${item.category}")
         Text(text = "수량: ${item.quantity}")
         Text(text = "사용자: ${item.userId}")
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(onClick=onDelete){
+            Text("삭제")
+        }
     }
 }
