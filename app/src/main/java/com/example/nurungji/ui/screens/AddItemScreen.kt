@@ -34,6 +34,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
@@ -41,9 +45,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -53,6 +59,7 @@ import com.example.nurungji.ui.InventoryViewModel
 import com.example.nurungji.ui.navigation.Screen
 import com.example.nurungji.ui.theme.PrimaryGreenDark
 import com.google.firebase.Timestamp
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -75,270 +82,304 @@ fun AddItemScreen(
 
     val categories = listOf("채소", "육류", "유제품", "과일", "음료", "냉동식품", "기타")
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            MaterialTheme.colorScheme.primary,
-                            PrimaryGreenDark
-                        )
-                    )
-                )
-                .padding(top = 40.dp, bottom = 20.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(horizontal = 16.dp)
-            ) {
-                IconButton(onClick = { onNavigate(Screen.Home) }) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "뒤로가기",
-                        tint = Color.White
-                    )
-                }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
-                Text(
-                    text = "식품 추가",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = Color.White
-                )
-            }
-        }
-
+    Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
+                .background(MaterialTheme.colorScheme.background)
+                .padding(innerPadding)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                QuickButton(
-                    text = "사진 촬영",
-                    icon = Icons.Default.CameraAlt,
-                    modifier = Modifier.weight(1f)
-                )
-
-                QuickButton(
-                    text = "영수증 스캔",
-                    icon = Icons.Default.ReceiptLong,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            OutlinedTextField(
-                value = name,
-                onValueChange = {
-                    name = it
-                    errorMessage = null
-                },
-                label = { Text("식품명") },
-                placeholder = { Text("예: 토마토") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                singleLine = true,
-                isError = errorMessage != null && name.isBlank()
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Box(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                OutlinedTextField(
-                    value = category,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("카테고리") },
-                    placeholder = { Text("선택하세요") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { categoryExpanded = true },
-                    shape = RoundedCornerShape(16.dp),
-                    isError = errorMessage != null && category.isBlank()
-                )
-
-                DropdownMenu(
-                    expanded = categoryExpanded,
-                    onDismissRequest = { categoryExpanded = false }
-                ) {
-                    categories.forEach { item ->
-                        DropdownMenuItem(
-                            text = { Text(item) },
-                            onClick = {
-                                category = item
-                                categoryExpanded = false
-                                errorMessage = null
-                            }
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            OutlinedTextField(
-                value = quantity,
-                onValueChange = {
-                    quantity = it
-                    errorMessage = null
-                },
-                label = { Text("수량") },
-                placeholder = { Text("예: 3") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                singleLine = true,
-                isError = errorMessage != null && (
-                        quantity.isBlank() ||
-                                quantity.toLongOrNull() == null ||
-                                (quantity.toLongOrNull() ?: 0L) <= 0L
-                        )
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { showDatePicker = true }
+                    .clip(
+                        RoundedCornerShape(
+                            bottomStart = 32.dp,
+                            bottomEnd = 32.dp
+                        )
+                    )
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.primary,
+                                PrimaryGreenDark
+                            )
+                        )
+                    )
+                    .padding(top = 40.dp, bottom = 28.dp, start = 24.dp, end = 24.dp)
             ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = { onNavigate(Screen.Home) },
+                        modifier = Modifier
+                            .size(60.dp)
+                            .background(
+                                color = Color.White.copy(alpha = 0.18f),
+                                shape = RoundedCornerShape(20.dp)
+                            )
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "뒤로가기",
+                            tint = Color.White
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    Text(
+                        text = "식품 추가",
+                        style = MaterialTheme.typography.headlineLarge,
+                        color = Color.White
+                    )
+                }
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    QuickButton(
+                        text = "사진 촬영",
+                        icon = Icons.Default.CameraAlt,
+                        modifier = Modifier.weight(1f),
+                        iconBackgroundColor = Color(0xFFD8F3DC),
+                        iconTint = PrimaryGreenDark
+                    )
+
+                    QuickButton(
+                        text = "영수증 스캔",
+                        icon = Icons.Default.ReceiptLong,
+                        modifier = Modifier.weight(1f),
+                        iconBackgroundColor = Color(0xFFFFE5B4),
+                        iconTint = Color(0xFFD4A574)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
                 OutlinedTextField(
-                    value = expirationDateText,
-                    onValueChange = {},
-                    readOnly = true,
-                    enabled = false,
-                    label = { Text("유통기한") },
-                    placeholder = { Text("날짜 선택") },
+                    value = name,
+                    onValueChange = {
+                        name = it
+                        errorMessage = null
+                    },
+                    label = { Text("식품명") },
+                    placeholder = { Text("예: 토마토") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
                     singleLine = true,
-                    isError = errorMessage != null && expirationDateText.isBlank()
+                    isError = errorMessage != null && name.isBlank()
                 )
-            }
 
-            Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-            errorMessage?.let {
-                Text(
-                    text = it,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Button(
-                onClick = {
-                    val quantityLong = quantity.toLongOrNull()
-
-                    errorMessage = when {
-                        name.isBlank() -> "식품명을 입력해주세요."
-                        category.isBlank() -> "카테고리를 선택해주세요."
-                        quantity.isBlank() -> "수량을 입력해주세요."
-                        quantityLong == null -> "수량은 숫자로 입력해주세요."
-                        quantityLong <= 0L -> "수량은 1 이상이어야 합니다."
-                        expirationDateText.isBlank() -> "유통기한을 선택해주세요."
-                        else -> null
-                    }
-
-                    if (errorMessage == null) {
-                        val expireTimestamp = parseDateToTimestamp(expirationDateText)
-
-                        viewModel.addInventory(
-                            itemName = name.trim(),
-                            category = category,
-                            quantity = quantityLong!!,
-                            expireDate = expireTimestamp
-                        )
-
-                        name = ""
-                        category = ""
-                        quantity = ""
-                        expirationDateText = ""
-                        errorMessage = null
-
-                        onNavigate(Screen.Inventory)
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                )
-            ) {
-                Icon(Icons.Default.Add, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("식품 추가하기")
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFFE8F5E9)
-                ),
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { categoryExpanded = true }
                 ) {
+                    OutlinedTextField(
+                        value = category,
+                        onValueChange = {},
+                        readOnly = true,
+                        enabled = false,
+                        label = { Text("카테고리") },
+                        placeholder = { Text("선택하세요") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        isError = errorMessage != null && category.isBlank()
+                    )
+
+                    DropdownMenu(
+                        expanded = categoryExpanded,
+                        onDismissRequest = { categoryExpanded = false }
+                    ) {
+                        categories.forEach { item ->
+                            DropdownMenuItem(
+                                text = { Text(item) },
+                                onClick = {
+                                    category = item
+                                    categoryExpanded = false
+                                    errorMessage = null
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = quantity,
+                    onValueChange = {
+                        quantity = it
+                        errorMessage = null
+                    },
+                    label = { Text("수량") },
+                    placeholder = { Text("예: 3") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    singleLine = true,
+                    isError = errorMessage != null && (
+                            quantity.isBlank() ||
+                                    quantity.toLongOrNull() == null ||
+                                    (quantity.toLongOrNull() ?: 0L) <= 0L
+                            )
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showDatePicker = true }
+                ) {
+                    OutlinedTextField(
+                        value = expirationDateText,
+                        onValueChange = {},
+                        readOnly = true,
+                        enabled = false,
+                        label = { Text("유통기한") },
+                        placeholder = { Text("날짜 선택") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        singleLine = true,
+                        isError = errorMessage != null && expirationDateText.isBlank()
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                errorMessage?.let {
                     Text(
-                        text = "📝 유통기한 알림",
+                        text = it,
+                        color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodyMedium
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "유통기한이 가까워지면 자동으로 알림을 보내드려요.",
-                        style = MaterialTheme.typography.bodySmall
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Button(
+                    onClick = {
+                        val quantityLong = quantity.toLongOrNull()
+
+                        errorMessage = when {
+                            name.isBlank() -> "식품명을 입력해주세요."
+                            category.isBlank() -> "카테고리를 선택해주세요."
+                            quantity.isBlank() -> "수량을 입력해주세요."
+                            quantityLong == null -> "수량은 숫자로 입력해주세요."
+                            quantityLong <= 0L -> "수량은 1 이상이어야 합니다."
+                            expirationDateText.isBlank() -> "유통기한을 선택해주세요."
+                            else -> null
+                        }
+
+                        if (errorMessage == null) {
+                            val expireTimestamp = parseDateToTimestamp(expirationDateText)
+
+                            viewModel.addInventory(
+                                itemName = name.trim(),
+                                category = category,
+                                quantity = quantityLong!!,
+                                expireDate = expireTimestamp
+                            )
+
+                            name = ""
+                            category = ""
+                            quantity = ""
+                            expirationDateText = ""
+                            errorMessage = null
+
+                            scope.launch {
+                                snackbarHostState.showSnackbar(
+                                    message = "식품이 추가되었습니다",
+                                    duration = SnackbarDuration.Short
+                                )
+                                onNavigate(Screen.Inventory)
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
                     )
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("식품 추가하기")
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFE8F5E9)
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text(
+                            text = "📝 유통기한 알림",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "유통기한이 가까워지면 자동으로 알림을 보내드려요.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                 }
             }
         }
-    }
 
-    if (showDatePicker) {
-        val datePickerState = rememberDatePickerState()
+        if (showDatePicker) {
+            val datePickerState = rememberDatePickerState()
 
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val millis = datePickerState.selectedDateMillis
-                        if (millis != null) {
-                            expirationDateText = formatMillisToDate(millis)
-                            errorMessage = null
+            DatePickerDialog(
+                onDismissRequest = { showDatePicker = false },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            val millis = datePickerState.selectedDateMillis
+                            if (millis != null) {
+                                expirationDateText = formatMillisToDate(millis)
+                                errorMessage = null
+                            }
+                            showDatePicker = false
                         }
-                        showDatePicker = false
+                    ) {
+                        Text("확인")
                     }
-                ) {
-                    Text("확인")
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { showDatePicker = false }
+                    ) {
+                        Text("취소")
+                    }
                 }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showDatePicker = false }
-                ) {
-                    Text("취소")
-                }
+            ) {
+                DatePicker(state = datePickerState)
             }
-        ) {
-            DatePicker(state = datePickerState)
         }
     }
 }
@@ -347,28 +388,48 @@ fun AddItemScreen(
 fun QuickButton(
     text: String,
     icon: ImageVector,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    iconBackgroundColor: Color,
+    iconTint: Color
 ) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
-        )
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
         Column(
             modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .padding(vertical = 28.dp, horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = text,
-                tint = if (text == "영수증 스캔") Color(0xFFD4A574) else MaterialTheme.colorScheme.primary
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .background(
+                        color = iconBackgroundColor,
+                        shape = RoundedCornerShape(20.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = text,
+                    tint = iconTint,
+                    modifier = Modifier.size(30.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            Text(
+                text = text,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text)
         }
     }
 }
@@ -382,7 +443,7 @@ fun parseDateToTimestamp(dateString: String): Timestamp? {
         val date = format.parse(dateString)
 
         if (date != null) Timestamp(date) else null
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         null
     }
 }

@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
@@ -31,6 +32,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -101,6 +103,12 @@ fun HeaderSection() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(
+                RoundedCornerShape(
+                    bottomStart = 32.dp,
+                    bottomEnd = 32.dp
+                )
+            )
             .background(
                 Brush.verticalGradient(
                     listOf(
@@ -109,7 +117,7 @@ fun HeaderSection() {
                     )
                 )
             )
-            .padding(24.dp)
+            .padding(top = 40.dp, bottom = 28.dp, start = 24.dp, end = 24.dp)
     ) {
         Column {
             Text(
@@ -198,32 +206,41 @@ fun ExpiringSection(
 
 @Composable
 fun QuickActionSection(onNavigate: (Screen) -> Unit) {
-    Row(
-        modifier = Modifier
-            .padding(16.dp)
-            .fillMaxWidth()
+
+    Column(
+        modifier = Modifier.padding(16.dp)
     ) {
-        QuickActionCard(
-            title = "식품 추가",
-            onClick = { onNavigate(Screen.AddItem) },
-            modifier = Modifier.weight(1f)
+
+        // 제목
+        Text(
+            text = "빠른 작업",
+            style = MaterialTheme.typography.titleLarge
         )
 
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        QuickActionCard(
-            title = "영수증 스캔",
-            onClick = { onNavigate(Screen.AddItem) },
-            modifier = Modifier.weight(1f)
-        )
+        // 카드 영역
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            QuickActionCard(
+                title = "식품 추가",
+                onClick = { onNavigate(Screen.AddItem) },
+                modifier = Modifier.weight(1f)
+            )
 
-        Spacer(modifier = Modifier.width(12.dp))
+            QuickActionCard(
+                title = "영수증 스캔",
+                onClick = { onNavigate(Screen.AddItem) },
+                modifier = Modifier.weight(1f)
+            )
 
-        QuickActionCard(
-            title = "레시피",
-            onClick = { onNavigate(Screen.Recipes) },
-            modifier = Modifier.weight(1f)
-        )
+            QuickActionCard(
+                title = "레시피",
+                onClick = { onNavigate(Screen.Recipes) },
+                modifier = Modifier.weight(1f)
+            )
+        }
     }
 }
 
