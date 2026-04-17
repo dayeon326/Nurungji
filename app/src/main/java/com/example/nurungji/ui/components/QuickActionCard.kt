@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Favorite
@@ -21,11 +22,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.nurungji.ui.theme.AccentYellow
-import com.example.nurungji.ui.theme.PrimaryGreenDark
 
 @Composable
 fun QuickActionCard(
@@ -42,73 +41,65 @@ fun QuickActionCard(
         else -> Icons.Default.Add
     }
 
-    val containerColor =
-        if (isPrimary) Color.Transparent else MaterialTheme.colorScheme.surface
-
     Card(
         modifier = modifier.clickable { onClick() },
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isPrimary) 4.dp else 2.dp)
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isPrimary) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.surface
+            }
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (isPrimary) 4.dp else 2.dp
+        )
     ) {
-        Box(
+        Column(
             modifier = Modifier
-                .then(
-                    if (isPrimary) {
-                        Modifier.background(
-                            Brush.verticalGradient(
-                                listOf(
-                                    MaterialTheme.colorScheme.primary,
-                                    PrimaryGreenDark
-                                )
-                            )
-                        )
+                .fillMaxWidth()
+                .padding(vertical = 20.dp, horizontal = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(
+                        color = if (isPrimary) {
+                            Color.White.copy(alpha = 0.2f)
+                        } else if (title == "레시피") {
+                            AccentYellow
+                        } else {
+                            MaterialTheme.colorScheme.secondary
+                        },
+                        shape = RoundedCornerShape(16.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = title,
+                    tint = if (isPrimary) {
+                        Color.White
+                    } else if (title == "레시피") {
+                        Color(0xFFD4A574)
                     } else {
-                        Modifier
+                        MaterialTheme.colorScheme.primary
                     }
                 )
-                .padding(vertical = 20.dp, horizontal = 8.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .background(
-                            color = if (isPrimary) {
-                                Color.White.copy(alpha = 0.2f)
-                            } else if (title == "레시피") {
-                                AccentYellow
-                            } else {
-                                MaterialTheme.colorScheme.secondary
-                            },
-                            shape = MaterialTheme.shapes.medium
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = title,
-                        tint = if (isPrimary) {
-                            Color.White
-                        } else if (title == "레시피") {
-                            Color(0xFFD4A574)
-                        } else {
-                            MaterialTheme.colorScheme.primary
-                        }
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = if (isPrimary) Color.White else MaterialTheme.colorScheme.onSurface
-                )
             }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelLarge,
+                color = if (isPrimary) {
+                    Color.White
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                }
+            )
         }
     }
 }

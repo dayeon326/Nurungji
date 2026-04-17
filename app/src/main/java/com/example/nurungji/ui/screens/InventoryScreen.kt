@@ -1,22 +1,25 @@
 package com.example.nurungji.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -25,8 +28,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -42,7 +43,10 @@ import com.example.nurungji.data.InventoryItem
 import com.example.nurungji.ui.InventoryViewModel
 import com.example.nurungji.ui.navigation.Screen
 import com.example.nurungji.ui.theme.TextSecondary
-import androidx.compose.foundation.layout.PaddingValues
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 @Composable
 fun InventoryScreen(
@@ -63,8 +67,7 @@ fun InventoryScreen(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+            .padding(horizontal = 16.dp)
     ) {
         item {
             Spacer(modifier = Modifier.height(12.dp))
@@ -99,8 +102,7 @@ fun InventoryScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
-                            modifier = Modifier
-                                .padding(end = 10.dp)
+                            modifier = Modifier.padding(end = 10.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Add,
@@ -155,8 +157,10 @@ fun InventoryScreen(
                                 viewModel.addInventory(
                                     itemName = itemName,
                                     category = category,
-                                    quantity = quantity
+                                    quantity = quantity,
+                                    expireDate = null
                                 )
+
                                 itemName = ""
                                 category = ""
                                 quantityText = ""
@@ -172,6 +176,10 @@ fun InventoryScreen(
                     }
                 }
             }
+        }
+
+        item {
+            Spacer(modifier = Modifier.height(14.dp))
         }
 
         item {
@@ -191,6 +199,10 @@ fun InventoryScreen(
                     color = TextSecondary
                 )
             }
+        }
+
+        item {
+            Spacer(modifier = Modifier.height(12.dp))
         }
 
         errorMessage?.let { error ->
@@ -244,6 +256,8 @@ fun InventoryScreen(
                     item = item,
                     onDelete = { viewModel.deleteInventory(item.documentId) }
                 )
+
+                Spacer(modifier = Modifier.height(12.dp))
             }
         }
 
@@ -258,6 +272,9 @@ fun InventoryItemCard(
     item: InventoryItem,
     onDelete: () -> Unit
 ) {
+    val expireText = formatExpireDate(item.expireDate?.toDate())
+    val ddayText = getDdayText(item.expireDate?.toDate())
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -285,9 +302,7 @@ fun InventoryItemCard(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
+                    Row {
                         AssistChip(
                             onClick = { },
                             label = { Text(item.category) },
@@ -312,6 +327,22 @@ fun InventoryItemCard(
                         style = MaterialTheme.typography.bodyLarge,
                         color = TextSecondary
                     )
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Text(
+                        text = "유통기한: $expireText",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondary
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        text = ddayText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
 
                 Button(
@@ -329,5 +360,25 @@ fun InventoryItemCard(
                 }
             }
         }
+    }
+}
+
+fun formatExpireDate(date: Date?): String {
+    if (date == null) return "없음"
+    val format = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    return format.format(date)
+}
+
+fun getDdayText(date: Date?): String {
+    if (date == null) return "유통기한 정보 없음"
+
+    val today = System.currentTimeMillis()
+    val diff = date.time - today
+    val days = TimeUnit.MILLISECONDS.toDays(diff)
+
+    return when {
+        days < 0 -> "기한 지남"
+        days == 0L -> "D-Day"
+        else -> "D-$days"
     }
 }

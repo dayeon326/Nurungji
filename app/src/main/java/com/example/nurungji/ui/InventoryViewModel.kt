@@ -3,43 +3,49 @@ package com.example.nurungji.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.nurungji.data.InventoryItem
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
 class InventoryViewModel : ViewModel() {
 
     private val db = FirebaseFirestore.getInstance()
+    private val auth = FirebaseAuth.getInstance()
 
     private val _inventoryItems = MutableStateFlow<List<InventoryItem>>(emptyList())
-    val inventoryItems: StateFlow<List<InventoryItem>> = _inventoryItems
+    val inventoryItems: StateFlow<List<InventoryItem>> = _inventoryItems.asStateFlow()
 
     private val _errorMessage = MutableStateFlow<String?>(null)
-    val errorMessage: StateFlow<String?> = _errorMessage
+    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
     fun loadInventory() {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             try {
-                val uid = FirebaseAuth.getInstance().currentUser?.uid
-
-                if (uid == null) {
-                    _errorMessage.value = "로그인한 사용자 정보가 없습니다."
-                    _inventoryItems.value = emptyList()
+                val currentUser = auth.currentUser
+                if (currentUser == null) {
+                    _errorMessage.value = "로그인이 필요합니다."
                     return@launch
                 }
 
                 val snapshot = db.collection("inventory")
-                    .whereEqualTo("userId", uid)
+                    .whereEqualTo("userId", currentUser.uid)
                     .get()
                     .await()
 
-                val items = snapshot.documents.mapNotNull { document ->
-                    val item = document.toObject(InventoryItem::class.java)
-                    item?.copy(documentId = document.id)
+                val items = snapshot.documents.map { doc ->
+                    InventoryItem(
+                        documentId = doc.id,
+                        userId = doc.getString("userId") ?: "",
+                        itemName = doc.getString("itemName") ?: "",
+                        category = doc.getString("category") ?: "",
+                        quantity = doc.getLong("quantity") ?: 0,
+                        expireDate = doc.getTimestamp("expireDate")
+                    )
                 }
 
                 _inventoryItems.value = items
@@ -51,21 +57,26 @@ class InventoryViewModel : ViewModel() {
         }
     }
 
-    fun addInventory(itemName: String, category: String, quantity: Long) {
-        viewModelScope.launch(Dispatchers.IO) {
+    fun addInventory(
+        itemName: String,
+        category: String,
+        quantity: Long,
+        expireDate: Timestamp?
+    ) {
+        viewModelScope.launch {
             try {
-                val uid = FirebaseAuth.getInstance().currentUser?.uid
-
-                if (uid == null) {
-                    _errorMessage.value = "로그인한 사용자 정보가 없습니다."
+                val currentUser = auth.currentUser
+                if (currentUser == null) {
+                    _errorMessage.value = "로그인이 필요합니다."
                     return@launch
                 }
 
-                val item = InventoryItem(
-                    itemName = itemName,
-                    category = category,
-                    quantity = quantity,
-                    userId = uid
+                val item = hashMapOf(
+                    "userId" to currentUser.uid,
+                    "itemName" to itemName,
+                    "category" to category,
+                    "quantity" to quantity,
+                    "expireDate" to expireDate
                 )
 
                 db.collection("inventory")
@@ -82,7 +93,7 @@ class InventoryViewModel : ViewModel() {
     }
 
     fun deleteInventory(documentId: String) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             try {
                 db.collection("inventory")
                     .document(documentId)
