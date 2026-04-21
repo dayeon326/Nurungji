@@ -92,7 +92,7 @@ fun HomeScreen(
             onNavigate = onNavigate
         )
 
-        CommunitySection(onNavigate)
+        RecipeSection(onNavigate)
 
         TipSection()
     }
@@ -295,7 +295,7 @@ fun ShoppingSection(
 }
 
 @Composable
-fun CommunitySection(onNavigate: (Screen) -> Unit) {
+fun RecipeSection(onNavigate: (Screen) -> Unit) {
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
         Text(
             text = "인기 레시피",
@@ -307,7 +307,7 @@ fun CommunitySection(onNavigate: (Screen) -> Unit) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { onNavigate(Screen.Community) },
+                .clickable { onNavigate(Screen.Recipes) },
             shape = MaterialTheme.shapes.large,
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surface
@@ -332,7 +332,7 @@ fun CommunitySection(onNavigate: (Screen) -> Unit) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { onNavigate(Screen.Community) },
+                .clickable { onNavigate(Screen.Recipes) },
             shape = MaterialTheme.shapes.large,
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surface

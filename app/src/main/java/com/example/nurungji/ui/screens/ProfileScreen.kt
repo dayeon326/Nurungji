@@ -60,7 +60,7 @@ fun ProfileScreen(
         MenuActionCard(
             icon = Icons.Outlined.Article,
             title = "내가 쓴 글",
-            onClick = { /* 나중에 추가 */ }
+            onClick = { onNavigate(Screen.Recipes) }
         )
 
         MenuActionCard(
@@ -68,30 +68,10 @@ fun ProfileScreen(
             title = "저장한 레시피",
             iconBgColor = Color(0xFFFFF3E0),
             iconColor = Color(0xFFFF9800),
-            onClick = { /* 나중에 추가 */ }
+            onClick = { onNavigate(Screen.Recipes)}
         )
 
-        MenuActionCard(
-            icon = Icons.Default.NotificationsNone,
-            title = "알림 설정",
-            onClick = { /* 나중에 추가 */ }
-        )
 
-        MenuActionCard(
-            icon = Icons.Outlined.Settings,
-            title = "설정",
-            iconBgColor = Color(0xFFECEFF1),
-            iconColor = Color(0xFF607D8B),
-            onClick = { /* 나중에 추가 */ }
-        )
-
-        MenuActionCard(
-            icon = Icons.Outlined.HelpOutline,
-            title = "도움말",
-            iconBgColor = Color(0xFFECEFF1),
-            iconColor = Color(0xFF607D8B),
-            onClick = { /* 나중에 추가 */ }
-        )
 
         Spacer(modifier = Modifier.height(16.dp))
 

@@ -7,7 +7,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import com.example.nurungji.ui.components.BottomNavBar
 import com.example.nurungji.ui.screens.AddItemScreen
-import com.example.nurungji.ui.screens.CommunityScreen
 import com.example.nurungji.ui.screens.HomeScreen
 import com.example.nurungji.ui.screens.InventoryScreen
 import com.example.nurungji.ui.screens.ProfileScreen
@@ -51,10 +50,6 @@ fun NurungjiApp() {
                 )
 
                 Screen.Shopping -> ShoppingListScreen(
-                    onNavigate = { currentScreen = it }
-                )
-
-                Screen.Community -> CommunityScreen(
                     onNavigate = { currentScreen = it }
                 )
 

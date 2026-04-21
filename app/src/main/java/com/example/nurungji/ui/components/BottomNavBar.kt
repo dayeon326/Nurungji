@@ -80,23 +80,6 @@ fun BottomNavBar(
             }
         )
 
-        // 커뮤니티
-        NavigationBarItem(
-            selected = currentScreen == Screen.Community,
-            onClick = { onNavigate(Screen.Community) },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = MaterialTheme.colorScheme.primary,
-                selectedTextColor = MaterialTheme.colorScheme.primary,
-                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-            ),
-            icon = {
-                Icon(Icons.Default.Settings, contentDescription = "커뮤니티")
-            },
-            label = {
-                Text("커뮤니티")
-            }
-        )
 
         // 프로필
         NavigationBarItem(
