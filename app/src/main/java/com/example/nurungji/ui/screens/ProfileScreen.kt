@@ -60,7 +60,7 @@ fun ProfileScreen(
         MenuActionCard(
             icon = Icons.Outlined.Article,
             title = "내가 쓴 글",
-            onClick = { onNavigate(Screen.Recipes) }
+            onClick = { onNavigate(Screen.MyRecipes) }
         )
 
         MenuActionCard(
@@ -68,7 +68,7 @@ fun ProfileScreen(
             title = "저장한 레시피",
             iconBgColor = Color(0xFFFFF3E0),
             iconColor = Color(0xFFFF9800),
-            onClick = { onNavigate(Screen.Recipes)}
+            onClick = { onNavigate(Screen.SavedRecipes)}
         )
 
 

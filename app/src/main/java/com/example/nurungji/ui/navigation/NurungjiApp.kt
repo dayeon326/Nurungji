@@ -12,6 +12,11 @@ import com.example.nurungji.ui.screens.InventoryScreen
 import com.example.nurungji.ui.screens.ProfileScreen
 import com.example.nurungji.ui.screens.RecipeScreen
 import com.example.nurungji.ui.screens.ShoppingListScreen
+import com.example.nurungji.ui.screens.AddRecipeScreen
+import com.example.nurungji.ui.screens.MyRecipesScreen
+import com.example.nurungji.ui.screens.RecipeDetailScreen
+import com.example.nurungji.ui.screens.SavedRecipesScreen
+import com.example.nurungji.ui.screens.EditRecipeScreen
 
 @Composable
 fun NurungjiApp() {
@@ -49,11 +54,31 @@ fun NurungjiApp() {
                     onNavigate = { currentScreen = it }
                 )
 
+                Screen.AddRecipe -> AddRecipeScreen(
+                    onBack = { currentScreen = Screen.Recipes }
+                )
+
                 Screen.Shopping -> ShoppingListScreen(
                     onNavigate = { currentScreen = it }
                 )
 
                 Screen.Profile -> ProfileScreen(
+                    onNavigate = { currentScreen = it }
+                )
+
+                Screen.MyRecipes -> MyRecipesScreen(
+                    onBack = { currentScreen = Screen.Profile },
+                    onNavigate = { currentScreen = it }
+                )
+                Screen.RecipeDetail -> RecipeDetailScreen(
+                    onBack = { currentScreen = Screen.Recipes },
+                    onNavigate = { currentScreen = it }
+                )
+                Screen.EditRecipe -> EditRecipeScreen(
+                    onBack = { currentScreen = Screen.RecipeDetail }
+                )
+                Screen.SavedRecipes -> SavedRecipesScreen(
+                    onBack = { currentScreen = Screen.Profile },
                     onNavigate = { currentScreen = it }
                 )
             }

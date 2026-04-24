@@ -1,4 +1,4 @@
-package com.example.nurungji.ui
+package com.example.nurungji.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

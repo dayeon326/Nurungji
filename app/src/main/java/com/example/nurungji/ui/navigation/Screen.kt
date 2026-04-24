@@ -5,6 +5,11 @@ enum class Screen {
     Inventory,
     AddItem,
     Recipes,
+    AddRecipe,
     Shopping,
-    Profile
+    Profile,
+    MyRecipes,
+    RecipeDetail,
+    SavedRecipes,
+    EditRecipe
 }

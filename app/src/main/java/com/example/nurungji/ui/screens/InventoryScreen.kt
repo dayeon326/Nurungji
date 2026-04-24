@@ -52,7 +52,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.nurungji.data.InventoryItem
-import com.example.nurungji.ui.InventoryViewModel
+import com.example.nurungji.ui.viewmodels.InventoryViewModel
 import com.example.nurungji.ui.navigation.Screen
 import com.example.nurungji.ui.theme.PrimaryGreenDark
 import com.example.nurungji.ui.theme.TextSecondary

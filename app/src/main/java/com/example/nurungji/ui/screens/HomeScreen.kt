@@ -38,7 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.nurungji.data.InventoryItem
-import com.example.nurungji.ui.InventoryViewModel
+import com.example.nurungji.ui.viewmodels.InventoryViewModel
 import com.example.nurungji.ui.components.ExpiringItemCard
 import com.example.nurungji.ui.components.QuickActionCard
 import com.example.nurungji.ui.components.SummaryCard
