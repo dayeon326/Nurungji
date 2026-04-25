@@ -45,13 +45,18 @@ import com.example.nurungji.ui.components.SummaryCard
 import com.example.nurungji.ui.navigation.Screen
 import com.example.nurungji.ui.theme.PrimaryGreenDark
 import com.example.nurungji.ui.theme.TextSecondary
+import com.example.nurungji.ui.viewmodels.RecipeViewModel
 
 @Composable
 fun HomeScreen(
     onNavigate: (Screen) -> Unit,
-    viewModel: InventoryViewModel = viewModel()
+    viewModel: InventoryViewModel = viewModel(),
+    recipeViewModel: RecipeViewModel
 ) {
     val inventoryItems by viewModel.inventoryItems.collectAsState()
+    val popularRecipes = recipeViewModel.recipes
+        .sortedByDescending { it.recommendUids.size }
+        .take(2)
 
     LaunchedEffect(Unit) {
         viewModel.loadInventory()
@@ -92,7 +97,11 @@ fun HomeScreen(
             onNavigate = onNavigate
         )
 
-        RecipeSection(onNavigate)
+        RecipeSection(
+            popularRecipes = popularRecipes,
+            recipeViewModel = recipeViewModel,
+            onNavigate = onNavigate
+        )
 
         TipSection()
     }
@@ -260,7 +269,7 @@ fun ShoppingSection(
         modifier = Modifier
             .padding(16.dp)
             .fillMaxWidth()
-            .clickable { onNavigate(Screen.Shopping) },
+            .clickable { onNavigate(Screen.ShoppingList) },
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFFFFE5B4)
@@ -295,7 +304,11 @@ fun ShoppingSection(
 }
 
 @Composable
-fun RecipeSection(onNavigate: (Screen) -> Unit) {
+fun RecipeSection(
+    popularRecipes: List<com.example.nurungji.models.Recipe>,
+    recipeViewModel: RecipeViewModel,
+    onNavigate: (Screen) -> Unit
+) {
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
         Text(
             text = "인기 레시피",
@@ -304,56 +317,47 @@ fun RecipeSection(onNavigate: (Screen) -> Unit) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onNavigate(Screen.Recipes) },
-            shape = MaterialTheme.shapes.large,
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
+        if (popularRecipes.isEmpty()) {
+            Text(
+                text = "아직 등록된 레시피가 없습니다.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = TextSecondary
             )
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "남은 채소로 만드는 볶음밥",
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "요리왕김씨 · ❤️ 234",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary
-                )
-            }
-        }
+        } else {
+            popularRecipes.forEach { recipe ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            recipeViewModel.selectedRecipeId = recipe.id
+                            onNavigate(Screen.RecipeDetail)
+                        },
+                    shape = MaterialTheme.shapes.large,
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = recipe.title,
+                            style = MaterialTheme.typography.titleMedium
+                        )
 
-        Spacer(modifier = Modifier.height(10.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
 
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onNavigate(Screen.Recipes) },
-            shape = MaterialTheme.shapes.large,
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            )
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "1인 가구 냉장고 정리법",
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "정리왕 · ❤️ 298",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary
-                )
+                        Text(
+                            text = "${recipe.authorId?.take(5) ?: "익명"} · ❤️ ${recipe.recommendUids.size}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextSecondary
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
             }
         }
     }
 }
-
 @Composable
 fun TipSection() {
     Card(

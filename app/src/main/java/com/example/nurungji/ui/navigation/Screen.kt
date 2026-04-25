@@ -6,7 +6,7 @@ enum class Screen {
     AddItem,
     Recipes,
     AddRecipe,
-    Shopping,
+    ShoppingList,
     Profile,
     MyRecipes,
     RecipeDetail,

@@ -2,6 +2,8 @@ package com.example.nurungji.ui.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -16,12 +18,15 @@ import com.example.nurungji.ui.viewmodels.RecipeViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddRecipeScreen(
-    onBack: () -> Unit, // 뒤로가기 (등록 완료 후 돌아갈 때 씀)
+    onBack: () -> Unit,
     recipeViewModel: RecipeViewModel = viewModel()
 ) {
-    // 사용자가 입력할 제목과 내용을 담을 빈 상자
     var title by remember { mutableStateOf("") }
+    var cookingTime by remember { mutableStateOf("") }
+    var ingredients by remember { mutableStateOf("") }
+    var hashtags by remember { mutableStateOf("") }
     var content by remember { mutableStateOf("") }
+
     val context = LocalContext.current
 
     Scaffold(
@@ -37,10 +42,10 @@ fun AddRecipeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 1. 제목 입력 칸
             OutlinedTextField(
                 value = title,
                 onValueChange = { title = it },
@@ -50,7 +55,31 @@ fun AddRecipeScreen(
                 singleLine = true
             )
 
-            // 2. 내용 입력 칸
+            OutlinedTextField(
+                value = cookingTime,
+                onValueChange = { cookingTime = it },
+                label = { Text("조리 시간 (분)") },
+                placeholder = { Text("예: 15") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+
+            OutlinedTextField(
+                value = ingredients,
+                onValueChange = { ingredients = it },
+                label = { Text("재료") },
+                placeholder = { Text("예: 계란, 양파, 밥") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedTextField(
+                value = hashtags,
+                onValueChange = { hashtags = it },
+                label = { Text("해시태그") },
+                placeholder = { Text("예: 간단요리, 자취요리") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
             OutlinedTextField(
                 value = content,
                 onValueChange = { content = it },
@@ -58,28 +87,49 @@ fun AddRecipeScreen(
                 placeholder = { Text("재료와 만드는 법을 자유롭게 적어주세요!") },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(250.dp) // 내용 입력 길이
+                    .height(250.dp)
             )
 
-            Spacer(modifier = Modifier.weight(1f)) // 버튼을 맨 아래로 밀어줌
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // 3. 등록하기 버튼
             Button(
                 onClick = {
-                    if (title.isNotBlank() && content.isNotBlank()) {
-                        recipeViewModel.addRecipe(context, title, content) {
+                    if (title.isNotBlank() && content.isNotBlank() && cookingTime.isNotBlank()) {
+                        recipeViewModel.addRecipe(
+                            context = context,
+                            title = title,
+                            content = content,
+                            cookingTime = cookingTime,
+                            ingredients = ingredients.split(",")
+                                .map { it.trim() }
+                                .filter { it.isNotEmpty() },
+                            hashtags = hashtags
+                                .split(",")
+                                .map { it.trim().removePrefix("#") }
+                                .filter { it.isNotEmpty() }
+                        ) {
                             onBack()
                         }
                     } else {
-                        Toast.makeText(context, "제목과 내용을 모두 적어주세요!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            context,
+                            "제목, 조리 시간, 요리 방법을 모두 입력해주세요!",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF579D74))
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF579D74)
+                )
             ) {
-                Text("레시피 등록하기", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    "레시피 등록하기",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }

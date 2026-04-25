@@ -33,7 +33,11 @@ class RecipeViewModel : ViewModel() {
                 if (e != null) return@addSnapshotListener
 
                 if (snapshot != null) {
-                    val list = snapshot.toObjects(Recipe::class.java)
+                    val list = snapshot.documents.mapNotNull { document ->
+                        document.toObject(Recipe::class.java)?.copy(
+                            id = document.id
+                        )
+                    }
                     recipes.clear()
                     recipes.addAll(list)
                 }
@@ -41,15 +45,28 @@ class RecipeViewModel : ViewModel() {
     }
 
     // 데이터 쏘는 요리사
-    fun addRecipe(context: Context, title: String, content: String, onSuccess: () -> Unit) {
+    fun addRecipe(
+        context: Context,
+        title: String,
+        content: String,
+        cookingTime: String,
+        ingredients: List<String>,
+        hashtags: List<String>,
+        onSuccess: () -> Unit
+    ) {
         val currentUserUid = auth.currentUser?.uid
 
         val newRecipe = hashMapOf(
             "title" to title,
+            "name" to title, // RecipeCard에서 사용
             "content" to content,
+            "time" to "${cookingTime}분",
+            "ingredients" to ingredients,
+            "hashtags" to hashtags,
             "authorId" to currentUserUid,
             "createdAt" to FieldValue.serverTimestamp(),
-            "recommendUids" to emptyList<String>()
+            "recommendUids" to emptyList<String>(),
+            "scrapUids" to emptyList<String>()
         )
 
         db.collection("recipes")

@@ -18,13 +18,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.nurungji.ui.navigation.Screen
 import com.example.nurungji.ui.viewmodels.RecipeViewModel
+import com.example.nurungji.models.Recipe
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecipeDetailScreen(
     onBack: () -> Unit,
     onNavigate: (Screen) -> Unit,
-    recipeViewModel: RecipeViewModel = viewModel()
+    recipeViewModel: RecipeViewModel
 ) {
     val recipe = recipeViewModel.recipes.find { it.id == recipeViewModel.selectedRecipeId }
     val currentUserId = recipeViewModel.auth.currentUser?.uid
@@ -56,6 +57,31 @@ fun RecipeDetailScreen(
             Text(text = recipe.title, fontSize = 24.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(8.dp))
             Text(text = "작성자: ${recipe.authorId?.take(5) ?: "익명"}...", color = Color.Gray, fontSize = 14.sp)
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "⏱ 조리 시간: ${recipe.time}",
+                fontSize = 14.sp,
+                color = Color.Gray
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "재료: ${recipe.ingredients.joinToString(", ")}",
+                fontSize = 14.sp
+            )
+
+            if (recipe.hashtags.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = recipe.hashtags.joinToString(" ") { "#$it" },
+                    fontSize = 14.sp,
+                    color = Color(0xFF579D74),
+                    fontWeight = FontWeight.Medium
+                )
+            }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = Color(0xFFEEEEEE))
             Text(text = recipe.content, fontSize = 16.sp, lineHeight = 24.sp, modifier = Modifier.weight(1f))

@@ -17,11 +17,14 @@ import com.example.nurungji.ui.screens.MyRecipesScreen
 import com.example.nurungji.ui.screens.RecipeDetailScreen
 import com.example.nurungji.ui.screens.SavedRecipesScreen
 import com.example.nurungji.ui.screens.EditRecipeScreen
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.nurungji.ui.viewmodels.RecipeViewModel
 
 @Composable
 fun NurungjiApp() {
 
     var currentScreen by remember { mutableStateOf(Screen.Home) }
+    val recipeViewModel: RecipeViewModel = viewModel()
 
     Scaffold(
         bottomBar = {
@@ -39,7 +42,8 @@ fun NurungjiApp() {
             when (currentScreen) {
 
                 Screen.Home -> HomeScreen(
-                    onNavigate = { currentScreen = it }
+                    onNavigate = { currentScreen = it },
+                    recipeViewModel = recipeViewModel
                 )
 
                 Screen.Inventory -> InventoryScreen(
@@ -51,14 +55,15 @@ fun NurungjiApp() {
                 )
 
                 Screen.Recipes -> RecipeScreen(
-                    onNavigate = { currentScreen = it }
+                    onNavigate = { currentScreen = it },
+                    recipeViewModel = recipeViewModel
                 )
 
                 Screen.AddRecipe -> AddRecipeScreen(
                     onBack = { currentScreen = Screen.Recipes }
                 )
 
-                Screen.Shopping -> ShoppingListScreen(
+                Screen.ShoppingList -> ShoppingListScreen(
                     onNavigate = { currentScreen = it }
                 )
 
@@ -72,7 +77,8 @@ fun NurungjiApp() {
                 )
                 Screen.RecipeDetail -> RecipeDetailScreen(
                     onBack = { currentScreen = Screen.Recipes },
-                    onNavigate = { currentScreen = it }
+                    onNavigate = { currentScreen = it },
+                    recipeViewModel = recipeViewModel
                 )
                 Screen.EditRecipe -> EditRecipeScreen(
                     onBack = { currentScreen = Screen.RecipeDetail }

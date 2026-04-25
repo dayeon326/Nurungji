@@ -21,12 +21,16 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.nurungji.ui.navigation.Screen
 import com.example.nurungji.ui.viewmodels.RecipeViewModel
+import com.example.nurungji.ui.viewmodels.InventoryViewModel
+import com.example.nurungji.ui.components.RecipeCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecipeScreen(
     onNavigate: (Screen) -> Unit,
-    recipeViewModel: RecipeViewModel = viewModel()
+    recipeViewModel: RecipeViewModel = viewModel(),
+    inventoryViewModel: InventoryViewModel = viewModel()
+
 ) {
     var selectedTab by remember { mutableStateOf("인기") }
     var searchText by remember { mutableStateOf("") }
@@ -34,14 +38,52 @@ fun RecipeScreen(
     // 뷰모델에서 파이어베이스 실시간 리스트 가져오기
     val allRecipes = recipeViewModel.recipes
 
+    LaunchedEffect(Unit) {
+        inventoryViewModel.loadInventory()
+    }
+    val inventoryItems by inventoryViewModel.inventoryItems.collectAsState()
+    val userIngredients = inventoryItems.map { it.itemName }
     // 검색어 필터링 및 탭 정렬 로직
-    val displayRecipes = allRecipes.filter {
-        it.title.contains(searchText, ignoreCase = true) || it.content.contains(searchText, ignoreCase = true)
+    val searchKeywords = searchText
+        .split(",")
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
+
+    val displayRecipes = allRecipes.filter { recipe ->
+        val searchKeywords = searchText
+            .split(",")
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+
+        if (searchKeywords.isEmpty()) {
+            true
+        } else {
+            searchKeywords.all { keyword ->
+                if (keyword.startsWith("#")) {
+                    val searchTag = keyword
+                        .removePrefix("#")
+                        .trim()
+                        .lowercase()
+
+                    recipe.hashtags.any { tag ->
+                        tag.removePrefix("#")
+                            .trim()
+                            .lowercase()
+                            .contains(searchTag)
+                    }
+                } else {
+                    recipe.title.contains(keyword, ignoreCase = true) ||
+                            recipe.ingredients.any { ingredient ->
+                                ingredient.contains(keyword, ignoreCase = true)
+                            }
+                }
+            }
+        }
     }.let { filteredList ->
         if (selectedTab == "인기") {
             filteredList.sortedByDescending { it.recommendUids.size }
         } else {
-            filteredList // 최신순 (뷰모델에서 이미 정렬됨)
+            filteredList
         }
     }
 
@@ -87,7 +129,7 @@ fun RecipeScreen(
                         value = searchText,
                         onValueChange = { searchText = it },
                         modifier = Modifier.fillMaxWidth().height(52.dp),
-                        placeholder = { Text("레시피 검색...", fontSize = 14.sp, color = Color.LightGray) },
+                        placeholder = { Text("제목, 재료, #해시태그 검색...", fontSize = 14.sp, color = Color.LightGray) },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
                         shape = RoundedCornerShape(16.dp),
                         colors = OutlinedTextFieldDefaults.colors(
@@ -151,10 +193,10 @@ fun RecipeScreen(
                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Text(text = recipe.title, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(text = recipe.content, color = Color.DarkGray, fontSize = 14.sp)
-                            Spacer(modifier = Modifier.height(8.dp))
+                            RecipeCard(
+                                recipe = recipe,
+                                userIngredients = userIngredients
+                            )
                             Row {
                                 Text(text = "❤️ 추천 ${recipe.recommendUids.size}", color = Color(0xFF579D74), fontSize = 12.sp)
                                 Spacer(modifier = Modifier.width(12.dp))
