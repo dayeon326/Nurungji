@@ -19,6 +19,7 @@ import com.example.nurungji.ui.screens.SavedRecipesScreen
 import com.example.nurungji.ui.screens.EditRecipeScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.nurungji.ui.viewmodels.RecipeViewModel
+import com.example.nurungji.ui.screens.ReceiptScanScreen
 
 @Composable
 fun NurungjiApp() {
@@ -85,6 +86,10 @@ fun NurungjiApp() {
                 )
                 Screen.SavedRecipes -> SavedRecipesScreen(
                     onBack = { currentScreen = Screen.Profile },
+                    onNavigate = { currentScreen = it }
+                )
+                Screen.ReceiptScan -> ReceiptScanScreen(
+                    onBack = { currentScreen = Screen.AddItem },
                     onNavigate = { currentScreen = it }
                 )
             }

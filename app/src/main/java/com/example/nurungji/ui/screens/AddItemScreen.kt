@@ -157,7 +157,8 @@ fun AddItemScreen(
                         icon = Icons.Default.CameraAlt,
                         modifier = Modifier.weight(1f),
                         iconBackgroundColor = Color(0xFFD8F3DC),
-                        iconTint = PrimaryGreenDark
+                        iconTint = PrimaryGreenDark,
+                        onClick = { /* 나중에 사진 촬영 기능 연결 */ }
                     )
 
                     QuickButton(
@@ -165,7 +166,8 @@ fun AddItemScreen(
                         icon = Icons.Default.ReceiptLong,
                         modifier = Modifier.weight(1f),
                         iconBackgroundColor = Color(0xFFFFE5B4),
-                        iconTint = Color(0xFFD4A574)
+                        iconTint = Color(0xFFD4A574),
+                        onClick = { onNavigate(Screen.ReceiptScan) } // 영수증 스캔 화면으로 슝!
                     )
                 }
 
@@ -384,15 +386,18 @@ fun AddItemScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QuickButton(
     text: String,
     icon: ImageVector,
     modifier: Modifier = Modifier,
     iconBackgroundColor: Color,
-    iconTint: Color
+    iconTint: Color,
+    onClick: () -> Unit
 ) {
     Card(
+        onClick = onClick,
         modifier = modifier,
         shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(

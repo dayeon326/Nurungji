@@ -12,6 +12,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
+data class ReceiptInventoryItem(
+    val itemName: String,
+    val category: String,
+    val quantity: Long,
+    val expireDate: Timestamp?
+)
+
 class InventoryViewModel : ViewModel() {
 
     private val db = FirebaseFirestore.getInstance()
@@ -99,6 +106,38 @@ class InventoryViewModel : ViewModel() {
                     .document(documentId)
                     .delete()
                     .await()
+
+                loadInventory()
+                _errorMessage.value = null
+
+            } catch (e: Exception) {
+                _errorMessage.value = e.message
+            }
+        }
+    }
+
+    fun addInventoryItemsFromReceipt(items: List<ReceiptInventoryItem>) {
+        viewModelScope.launch {
+            try {
+                val currentUser = auth.currentUser
+                if (currentUser == null) {
+                    _errorMessage.value = "로그인이 필요합니다."
+                    return@launch
+                }
+
+                items.forEach { item ->
+                    val data = hashMapOf(
+                        "userId" to currentUser.uid,
+                        "itemName" to item.itemName.trim(),
+                        "category" to item.category,
+                        "quantity" to item.quantity,
+                        "expireDate" to item.expireDate
+                    )
+
+                    db.collection("inventory")
+                        .add(data)
+                        .await()
+                }
 
                 loadInventory()
                 _errorMessage.value = null

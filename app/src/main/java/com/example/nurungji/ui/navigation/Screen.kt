@@ -11,5 +11,6 @@ enum class Screen {
     MyRecipes,
     RecipeDetail,
     SavedRecipes,
-    EditRecipe
+    EditRecipe,
+    ReceiptScan
 }
