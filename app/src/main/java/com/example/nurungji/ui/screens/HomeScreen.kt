@@ -240,7 +240,7 @@ fun QuickActionSection(onNavigate: (Screen) -> Unit) {
 
             QuickActionCard(
                 title = "영수증 스캔",
-                onClick = { onNavigate(Screen.AddItem) },
+                onClick = { onNavigate(Screen.ReceiptScan) },
                 modifier = Modifier.weight(1f)
             )
 

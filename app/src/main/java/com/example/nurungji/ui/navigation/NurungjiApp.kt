@@ -22,17 +22,18 @@ import com.example.nurungji.ui.viewmodels.RecipeViewModel
 import com.example.nurungji.ui.screens.ReceiptScanScreen
 
 @Composable
-fun NurungjiApp() {
-
+fun NurungjiApp(
+    onLogout: () -> Unit
+) {
     var currentScreen by remember { mutableStateOf(Screen.Home) }
     val recipeViewModel: RecipeViewModel = viewModel()
 
     Scaffold(
         bottomBar = {
-            BottomNavBar(
-                currentScreen = currentScreen,
-                onNavigate = { currentScreen = it }
-            )
+                BottomNavBar(
+                    currentScreen = currentScreen,
+                    onNavigate = { currentScreen = it }
+                )
         }
     ) { innerPadding ->
 
@@ -41,7 +42,6 @@ fun NurungjiApp() {
         ) {
 
             when (currentScreen) {
-
                 Screen.Home -> HomeScreen(
                     onNavigate = { currentScreen = it },
                     recipeViewModel = recipeViewModel
@@ -69,7 +69,8 @@ fun NurungjiApp() {
                 )
 
                 Screen.Profile -> ProfileScreen(
-                    onNavigate = { currentScreen = it }
+                    onNavigate = { currentScreen = it },
+                    onLogOut = onLogout
                 )
 
                 Screen.MyRecipes -> MyRecipesScreen(

@@ -5,14 +5,7 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import com.example.nurungji.ui.navigation.NurungjiApp
 import com.example.nurungji.ui.theme.NurungjiTheme
 import com.google.android.gms.auth.api.signin.*
@@ -23,6 +16,7 @@ import android.app.Application
 import com.google.firebase.FirebaseApp
 import com.google.firebase.appcheck.FirebaseAppCheck
 import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
+import com.example.nurungji.ui.screens.LoginScreen
 
 class MyApp : Application() {
     override fun onCreate() {
@@ -71,7 +65,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             NurungjiTheme {
                 if (isLoggedIn) {
-                    NurungjiApp()
+                    NurungjiApp(
+                        onLogout = {signOut()}
+                    )
                 } else {
                     LoginScreen(
                         onGoogleLoginClick = { signIn() }
@@ -103,32 +99,8 @@ class MainActivity : ComponentActivity() {
 
     private fun signOut() {
         auth.signOut()
-        googleSignInClient.revokeAccess().addOnCompleteListener {
+        googleSignInClient.signOut()
             isLoggedIn = false
+            Log.d("LOGIN", "로그아웃 완료")
         }
     }
-}
-
-@Composable
-fun LoginScreen(
-    onGoogleLoginClick: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = "구글 로그인",
-            style = MaterialTheme.typography.headlineSmall
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(onClick = onGoogleLoginClick) {
-            Text("Google로 로그인")
-        }
-    }
-}

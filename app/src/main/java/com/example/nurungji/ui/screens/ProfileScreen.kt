@@ -40,7 +40,8 @@ fun ProfileScreen(
         savedMoney = 45000,
         preventedWasteKg = 3.2
     ),
-    onNavigate: (Screen) -> Unit = {}
+    onNavigate: (Screen) -> Unit = {},
+    onLogOut: () -> Unit
 ) {
     val scrollState = rememberScrollState()
 
@@ -81,7 +82,9 @@ fun ProfileScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         // 4. 로그아웃 버튼
-        LogoutButton()
+        LogoutButton(
+            onLogOut=onLogOut
+        )
 
         Spacer(modifier = Modifier.height(32.dp))
     }
@@ -199,9 +202,11 @@ private fun RowScope.BadgeItem(icon: String, title: String) {
 }
 
 @Composable
-private fun LogoutButton() {
+private fun LogoutButton(
+    onLogOut: () -> Unit
+) {
     Card(
-        onClick = { /* 나중에 로그아웃 기능 넣는 곳 */ },
+        onClick = { onLogOut() },
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = RoundedCornerShape(16.dp),
