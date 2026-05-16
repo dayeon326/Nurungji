@@ -57,6 +57,11 @@ class ShoppingListViewModel : ViewModel() {
             .addOnSuccessListener {
                 Toast.makeText(context, "재료가 추가되었습니다.", Toast.LENGTH_SHORT).show()
             }
+            .addOnFailureListener { e->
+                Toast.makeText(context,
+                    "추가 실패: ${e.message}",
+                    Toast.LENGTH_LONG).show()
+            }
     }
 
     fun toggleChecked(itemId: String, currentChecked: Boolean) {
