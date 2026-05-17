@@ -30,6 +30,25 @@ class InventoryViewModel : ViewModel() {
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
+    private suspend fun addPurchaseHistory(
+        userId: String,
+        itemName: String,
+        category: String,
+        quantity: Long
+    ) {
+        val purchaseData = hashMapOf(
+            "userId" to userId,
+            "itemName" to itemName.trim(),
+            "category" to category,
+            "quantity" to quantity,
+            "purchaseDate" to Timestamp.now()
+        )
+
+        db.collection("purchase_history")
+            .add(purchaseData)
+            .await()
+    }
+
     fun loadInventory() {
         viewModelScope.launch {
             try {
@@ -90,6 +109,13 @@ class InventoryViewModel : ViewModel() {
                     .add(item)
                     .await()
 
+                addPurchaseHistory(
+                    userId = currentUser.uid,
+                    itemName = itemName,
+                    category = category,
+                    quantity = quantity
+                )
+
                 loadInventory()
                 _errorMessage.value = null
 
@@ -137,6 +163,13 @@ class InventoryViewModel : ViewModel() {
                     db.collection("inventory")
                         .add(data)
                         .await()
+
+                    addPurchaseHistory(
+                        userId = currentUser.uid,
+                        itemName = item.itemName,
+                        category = item.category,
+                        quantity = item.quantity
+                    )
                 }
 
                 loadInventory()

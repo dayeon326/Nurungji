@@ -23,6 +23,8 @@ import com.example.nurungji.ui.navigation.Screen
 import com.example.nurungji.ui.viewmodels.RecipeViewModel
 import com.example.nurungji.ui.viewmodels.InventoryViewModel
 import com.example.nurungji.ui.components.RecipeCard
+import com.example.nurungji.models.Recipe
+import com.example.nurungji.data.InventoryItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +45,7 @@ fun RecipeScreen(
     }
     val inventoryItems by inventoryViewModel.inventoryItems.collectAsState()
     val userIngredients = inventoryItems.map { it.itemName }
+
     // 검색어 필터링 및 탭 정렬 로직
     val searchKeywords = searchText
         .split(",")
@@ -80,12 +83,52 @@ fun RecipeScreen(
             }
         }
     }.let { filteredList ->
-        if (selectedTab == "인기") {
-            filteredList.sortedByDescending { it.recommendUids.size }
-        } else {
-            filteredList
+        when (selectedTab) {
+            "인기" -> {
+                filteredList.sortedByDescending { it.recommendUids.size }
+            }
+
+            "최신" -> {
+                filteredList.sortedByDescending {
+                    it.createdAt?.seconds ?: 0L
+                }
+            }
+
+            "임박재료" -> {
+
+                filteredList.sortedByDescending { recipe: Recipe ->
+
+                    inventoryItems.count { item: InventoryItem ->
+
+                        val matched = recipe.ingredients.any { ingredient ->
+                            ingredient.contains(item.itemName, ignoreCase = true) ||
+                                    item.itemName.contains(ingredient, ignoreCase = true)
+                        }
+
+                        if (matched) {
+
+                            val expireMillis =
+                                item.expireDate?.toDate()?.time ?: Long.MAX_VALUE
+
+                            val currentMillis = System.currentTimeMillis()
+
+                            val daysLeft =
+                                ((expireMillis - currentMillis)
+                                        / (1000 * 60 * 60 * 24)).toInt()
+
+                            daysLeft <= 3
+
+                        } else {
+                            false
+                        }
+                    }
+                }
+            }
+
+            else -> filteredList
         }
     }
+
 
     Scaffold(
         floatingActionButton = {
@@ -171,6 +214,19 @@ fun RecipeScreen(
                             elevation = null,
                             shape = RoundedCornerShape(16.dp)
                         ) { Text("최신") }
+
+                        Button(
+                            onClick = { selectedTab = "임박재료" },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (selectedTab == "임박재료") Color.White else Color.Transparent,
+                                contentColor = if (selectedTab == "임박재료") Color(0xFF579D74) else Color.White
+                            ),
+                            elevation = null,
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Text("임박재료")
+                        }
                     }
                 }
             }

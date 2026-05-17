@@ -4,5 +4,6 @@ data class ShoppingItem(
     val id: String = "",
     val userId: String = "",
     val name: String = "",
-    val checked: Boolean = false
+    val checked: Boolean = false,
+    val source: String = "manual"
 )

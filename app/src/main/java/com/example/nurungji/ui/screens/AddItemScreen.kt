@@ -86,7 +86,16 @@ fun AddItemScreen(
     val scope = rememberCoroutineScope()
 
     Scaffold(
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+        snackbarHost = {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 32.dp),
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                SnackbarHost(hostState = snackbarHostState)
+            }
+        }
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -312,7 +321,6 @@ fun AddItemScreen(
                                     message = "식품이 추가되었습니다",
                                     duration = SnackbarDuration.Short
                                 )
-                                onNavigate(Screen.Inventory)
                             }
                         }
                     },

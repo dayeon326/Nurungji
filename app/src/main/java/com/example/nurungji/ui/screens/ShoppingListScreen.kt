@@ -27,22 +27,29 @@ import com.example.nurungji.ui.viewmodels.ShoppingItem
 import com.example.nurungji.ui.viewmodels.ShoppingListViewModel
 import com.example.nurungji.ui.navigation.Screen
 
+
 @Composable
 fun ShoppingListScreen(
     onNavigate: (Screen) -> Unit,
     shoppingListViewModel: ShoppingListViewModel = viewModel()
 ) {
     val items by shoppingListViewModel.shoppingItems.collectAsState()
+    val context = LocalContext.current
 
-    LaunchedEffect(Unit) {
-        shoppingListViewModel.loadShoppingItems()
-    }
+    val manualRemainingItems =
+        items.filter { !it.checked && it.source == "manual" }
 
-    val remainingItems = items.filter { !it.checked }
-    val completedItems = items.filter { it.checked }
+    val autoRemainingItems =
+        items.filter { !it.checked && it.source == "auto" }
+
+    val completedItems =
+        items.filter { it.checked }
     var showAddDialog by remember { mutableStateOf(false) }
     var newItemName by remember { mutableStateOf("") }
-    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        shoppingListViewModel.loadShoppingItems(context)
+    }
 
     Box(
         modifier = Modifier
@@ -81,7 +88,7 @@ fun ShoppingListScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         SummaryItem("전체", items.size, "all")
-                        SummaryItem("남은 재료", remainingItems.size, "remaining")
+                        SummaryItem("남은 재료", items.count { !it.checked }, "remaining")
                         SummaryItem("구매 완료", completedItems.size, "completed")
                     }
                 }
@@ -93,16 +100,25 @@ fun ShoppingListScreen(
                     start = 20.dp,
                     end = 20.dp,
                     top = 20.dp,
-                    bottom = 100.dp
+                    bottom = 120.dp
                 ),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                if (remainingItems.isNotEmpty()) {
-                    item {
-                        SectionTitle("남은 재료", remainingItems.size, false)
-                    }
+                item {
+                    SectionTitle("직접 추가한 재료", manualRemainingItems.size, false)
+                }
 
-                    items(remainingItems) { item ->
+                if (manualRemainingItems.isEmpty()) {
+                    item {
+                        Text(
+                            text = "직접 추가한 재료가 없습니다.",
+                            color = TextSecondary,
+                            fontSize = 14.sp,
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+                } else {
+                    items(manualRemainingItems) { item ->
                         ShoppingItemRow(
                             item = item,
                             onCheck = {
@@ -115,12 +131,47 @@ fun ShoppingListScreen(
                     }
                 }
 
-                if (completedItems.isNotEmpty()) {
-                    item {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        SectionTitle("구매 완료", completedItems.size, true)
-                    }
+                item {
+                    SectionTitle("자동 추천 재료", autoRemainingItems.size, false)
+                }
 
+                if (autoRemainingItems.isEmpty()) {
+                    item {
+                        Text(
+                            text = "자동 추천 재료가 없습니다.",
+                            color = TextSecondary,
+                            fontSize = 14.sp,
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+                } else {
+                    items(autoRemainingItems) { item ->
+                        ShoppingItemRow(
+                            item = item,
+                            onCheck = {
+                                shoppingListViewModel.toggleChecked(item.id, item.checked)
+                            },
+                            onDelete = {
+                                shoppingListViewModel.deleteItem(item.id)
+                            }
+                        )
+                    }
+                }
+
+                item {
+                    SectionTitle("구매 완료", completedItems.size, true)
+                }
+
+                if (completedItems.isEmpty()) {
+                    item {
+                        Text(
+                            text = "구매 완료한 재료가 없습니다.",
+                            color = TextSecondary,
+                            fontSize = 14.sp,
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+                } else {
                     items(completedItems) { item ->
                         ShoppingItemRow(
                             item = item,

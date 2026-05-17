@@ -1,5 +1,7 @@
 package com.example.nurungji.models
 
+import com.google.firebase.Timestamp
+
 data class Recipe(
     val id: String = "",
     val title: String = "",
@@ -13,5 +15,7 @@ data class Recipe(
     val imageRes: Int = android.R.drawable.ic_menu_gallery,
 
     val recommendUids: List<String> = emptyList(),
-    val scrapUids: List<String> = emptyList()
+    val scrapUids: List<String> = emptyList(),
+
+    val createdAt: Timestamp? = null
 )
