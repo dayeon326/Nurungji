@@ -93,8 +93,23 @@ class ShoppingListViewModel : ViewModel() {
             .get()
             .addOnSuccessListener { snapshot ->
 
+                val calendar = Calendar.getInstance()
+                calendar.add(Calendar.DAY_OF_YEAR, -30)
+                val thirtyDaysAgo = Timestamp(calendar.time)
+
                 val purchaseNames = snapshot.documents.mapNotNull { doc ->
-                    doc.getString("itemName")?.trim()
+                    val purchaseDate = doc.getTimestamp("purchaseDate")
+                    val itemName = doc.getString("itemName")?.trim()
+
+                    if (
+                        purchaseDate != null &&
+                        purchaseDate.seconds >= thirtyDaysAgo.seconds &&
+                        !itemName.isNullOrBlank()
+                    ) {
+                        itemName
+                    } else {
+                        null
+                    }
                 }
 
                 val frequentItems = purchaseNames
