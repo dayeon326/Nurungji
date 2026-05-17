@@ -88,7 +88,7 @@ fun ShoppingListScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         SummaryItem("전체", items.size, "all")
-                        SummaryItem("남은 재료", items.count { !it.checked }, "remaining")
+                        SummaryItem("남은 항목", items.count { !it.checked }, "remaining")
                         SummaryItem("구매 완료", completedItems.size, "completed")
                     }
                 }
@@ -105,13 +105,13 @@ fun ShoppingListScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 item {
-                    SectionTitle("직접 추가한 재료", manualRemainingItems.size, false)
+                    SectionTitle("직접 추가한 식품", manualRemainingItems.size, false)
                 }
 
                 if (manualRemainingItems.isEmpty()) {
                     item {
                         Text(
-                            text = "직접 추가한 재료가 없습니다.",
+                            text = "직접 추가한 식품이 없습니다.",
                             color = TextSecondary,
                             fontSize = 14.sp,
                             modifier = Modifier.padding(start = 8.dp)
@@ -132,13 +132,13 @@ fun ShoppingListScreen(
                 }
 
                 item {
-                    SectionTitle("자동 추천 재료", autoRemainingItems.size, false)
+                    SectionTitle("자동 추천 식품", autoRemainingItems.size, false)
                 }
 
                 if (autoRemainingItems.isEmpty()) {
                     item {
                         Text(
-                            text = "자동 추천 재료가 없습니다.",
+                            text = "자동 추천 식품이 없습니다.",
                             color = TextSecondary,
                             fontSize = 14.sp,
                             modifier = Modifier.padding(start = 8.dp)
@@ -165,7 +165,7 @@ fun ShoppingListScreen(
                 if (completedItems.isEmpty()) {
                     item {
                         Text(
-                            text = "구매 완료한 재료가 없습니다.",
+                            text = "구매 완료한 식품이 없습니다.",
                             color = TextSecondary,
                             fontSize = 14.sp,
                             modifier = Modifier.padding(start = 8.dp)
@@ -209,7 +209,7 @@ fun ShoppingListScreen(
                     newItemName = ""
                 },
                 title = {
-                    Text("재료 추가", fontWeight = FontWeight.Bold)
+                    Text("식품 추가", fontWeight = FontWeight.Bold)
                 },
                 text = {
                     OutlinedTextField(
