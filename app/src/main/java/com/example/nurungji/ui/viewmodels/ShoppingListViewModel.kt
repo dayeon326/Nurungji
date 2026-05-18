@@ -20,10 +20,12 @@ class ShoppingListViewModel : ViewModel() {
     private val _shoppingItems = MutableStateFlow<List<ShoppingItem>>(emptyList())
     val shoppingItems: StateFlow<List<ShoppingItem>> = _shoppingItems.asStateFlow()
 
-    fun loadShoppingItems(context: Context) {
+    fun loadShoppingItems(context: Context, includeAutoRecommendations: Boolean = true) {
         val uid = auth.currentUser?.uid ?: return
 
-        addAutoRecommendedItems(context)
+        if (includeAutoRecommendations) {
+            addAutoRecommendedItems(context)
+        }
 
         db.collection("shopping_list")
             .whereEqualTo("userId", uid)

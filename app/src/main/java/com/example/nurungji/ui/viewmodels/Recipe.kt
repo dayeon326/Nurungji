@@ -7,12 +7,14 @@ data class Recipe(
     val title: String = "",
     val content: String = "",
     val authorId: String = "",
+    val authorNickname: String = "",
 
     val time: String = "",
     val ingredients: List<String> = emptyList(),
     val hashtags: List<String> = emptyList(),
 
     val imageRes: Int = android.R.drawable.ic_menu_gallery,
+    val imageUrl: String = "",
 
     val recommendUids: List<String> = emptyList(),
     val scrapUids: List<String> = emptyList(),

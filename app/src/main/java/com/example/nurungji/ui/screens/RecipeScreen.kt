@@ -39,6 +39,7 @@ fun RecipeScreen(
 
     // 뷰모델에서 파이어베이스 실시간 리스트 가져오기
     val allRecipes = recipeViewModel.recipes
+    val recipeLoadError = recipeViewModel.recipeLoadError
 
     LaunchedEffect(Unit) {
         inventoryViewModel.loadInventory()
@@ -237,6 +238,23 @@ fun RecipeScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                if (recipeLoadError != null) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3F3)),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(
+                                text = "레시피를 불러오지 못했어요: $recipeLoadError",
+                                color = Color(0xFFD32F2F),
+                                fontSize = 13.sp,
+                                modifier = Modifier.padding(16.dp)
+                            )
+                        }
+                    }
+                }
+
                 items(displayRecipes) { recipe ->
                     Card(
                         onClick = {
@@ -256,7 +274,10 @@ fun RecipeScreen(
                             Row {
                                 Text(text = "❤️ 추천 ${recipe.recommendUids.size}", color = Color(0xFF579D74), fontSize = 12.sp)
                                 Spacer(modifier = Modifier.width(12.dp))
-                                Text(text = "👤 작성자: ${recipe.authorId?.take(5) ?: "익명"}...", color = Color.Gray, fontSize = 12.sp)
+                                val authorName = recipe.authorNickname
+                                    .takeIf { it.isNotBlank() }
+                                    ?: recipe.authorId.take(5).ifBlank { "익명" }
+                                Text(text = "👤 작성자: $authorName", color = Color.Gray, fontSize = 12.sp)
                             }
                         }
                     }

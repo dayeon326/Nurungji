@@ -5,6 +5,6 @@ data class UserProfile(
     val name: String,               // 이름 (예: 김민수)
     val email: String,              // 이메일
     val registeredFoodCount: Int,   // 등록한 식품 수
-    val savedMoney: Int,            // 절약한 비용
-    val preventedWasteKg: Double    // 방지한 낭비량
+    val shoppingListCount: Int,     // 장보기 리스트 수
+    val expiringFoodCount: Int      // 곧 만료되는 식품 수
 )

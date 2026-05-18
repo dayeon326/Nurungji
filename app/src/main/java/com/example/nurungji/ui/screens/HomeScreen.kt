@@ -325,6 +325,9 @@ fun RecipeSection(
             )
         } else {
             popularRecipes.forEach { recipe ->
+                val authorName = recipe.authorNickname
+                    .takeIf { it.isNotBlank() }
+                    ?: recipe.authorId.take(5).ifBlank { "익명" }
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -346,7 +349,7 @@ fun RecipeSection(
                         Spacer(modifier = Modifier.height(4.dp))
 
                         Text(
-                            text = "${recipe.authorId?.take(5) ?: "익명"} · ❤️ ${recipe.recommendUids.size}",
+                            text = "$authorName · ❤️ ${recipe.recommendUids.size}",
                             style = MaterialTheme.typography.bodyMedium,
                             color = TextSecondary
                         )

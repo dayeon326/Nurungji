@@ -61,7 +61,8 @@ fun NurungjiApp(
                 )
 
                 Screen.AddRecipe -> AddRecipeScreen(
-                    onBack = { currentScreen = Screen.Recipes }
+                    onBack = { currentScreen = Screen.Recipes },
+                    recipeViewModel = recipeViewModel
                 )
 
                 Screen.ShoppingList -> ShoppingListScreen(
@@ -75,7 +76,8 @@ fun NurungjiApp(
 
                 Screen.MyRecipes -> MyRecipesScreen(
                     onBack = { currentScreen = Screen.Profile },
-                    onNavigate = { currentScreen = it }
+                    onNavigate = { currentScreen = it },
+                    recipeViewModel = recipeViewModel
                 )
                 Screen.RecipeDetail -> RecipeDetailScreen(
                     onBack = { currentScreen = Screen.Recipes },
@@ -83,11 +85,13 @@ fun NurungjiApp(
                     recipeViewModel = recipeViewModel
                 )
                 Screen.EditRecipe -> EditRecipeScreen(
-                    onBack = { currentScreen = Screen.RecipeDetail }
+                    onBack = { currentScreen = Screen.RecipeDetail },
+                    recipeViewModel = recipeViewModel
                 )
                 Screen.SavedRecipes -> SavedRecipesScreen(
                     onBack = { currentScreen = Screen.Profile },
-                    onNavigate = { currentScreen = it }
+                    onNavigate = { currentScreen = it },
+                    recipeViewModel = recipeViewModel
                 )
                 Screen.ReceiptScan -> ReceiptScanScreen(
                     onBack = { currentScreen = Screen.AddItem },

@@ -1,18 +1,25 @@
 package com.example.nurungji.ui.screens
 
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.nurungji.ui.components.RecipeImage
 import com.example.nurungji.ui.viewmodels.RecipeViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -26,8 +33,14 @@ fun AddRecipeScreen(
     var ingredients by remember { mutableStateOf("") }
     var hashtags by remember { mutableStateOf("") }
     var content by remember { mutableStateOf("") }
+    var imageUri by remember { mutableStateOf<android.net.Uri?>(null) }
 
     val context = LocalContext.current
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        imageUri = uri
+    }
 
     Scaffold(
         topBar = {
@@ -90,6 +103,12 @@ fun AddRecipeScreen(
                     .height(250.dp)
             )
 
+            RecipeImagePicker(
+                imageModel = imageUri,
+                buttonText = "갤러리에서 사진 선택",
+                onPickImage = { imagePickerLauncher.launch("image/*") }
+            )
+
             Spacer(modifier = Modifier.height(8.dp))
 
             Button(
@@ -106,7 +125,8 @@ fun AddRecipeScreen(
                             hashtags = hashtags
                                 .split(",")
                                 .map { it.trim().removePrefix("#") }
-                                .filter { it.isNotEmpty() }
+                                .filter { it.isNotEmpty() },
+                            imageUri = imageUri
                         ) {
                             onBack()
                         }
@@ -131,6 +151,42 @@ fun AddRecipeScreen(
                     fontWeight = FontWeight.Bold
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun RecipeImagePicker(
+    imageModel: Any?,
+    buttonText: String,
+    onPickImage: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(180.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color(0xFFF1F4F2)),
+            contentAlignment = Alignment.Center
+        ) {
+            if (imageModel != null && imageModel.toString().isNotBlank()) {
+                RecipeImage(
+                    imageSource = imageModel,
+                    fallbackImageRes = android.R.drawable.ic_menu_gallery,
+                    contentDescription = "레시피 사진",
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Text("선택된 사진 없음", color = Color.Gray)
+            }
+        }
+
+        OutlinedButton(
+            onClick = onPickImage,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(buttonText)
         }
     }
 }
