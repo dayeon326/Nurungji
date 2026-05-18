@@ -9,41 +9,101 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.filled.NotificationsNone
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Article
 import androidx.compose.material.icons.outlined.BookmarkBorder
-import androidx.compose.material.icons.outlined.HelpOutline
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import java.text.DecimalFormat
+import androidx.lifecycle.viewmodel.compose.viewModel
+import android.widget.Toast
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.SetOptions
+import com.google.firebase.firestore.FirebaseFirestore
 
 // 아까 만든 파일들을 가져옵니다.
 import com.example.nurungji.ui.navigation.Screen
 import com.example.nurungji.data.UserProfile
 import com.example.nurungji.ui.components.MenuActionCard
+import com.example.nurungji.ui.viewmodels.InventoryViewModel
+import com.example.nurungji.ui.viewmodels.ShoppingListViewModel
 
 @Composable
 fun ProfileScreen(
-    // 당장 화면에 보일 가짜 데이터를 기본으로 넣어둡니다.
-    userProfile: UserProfile = UserProfile(
-        name = "김민수",
-        email = "minsu@example.com",
-        registeredFoodCount = 24,
-        savedMoney = 45000,
-        preventedWasteKg = 3.2
-    ),
     onNavigate: (Screen) -> Unit = {},
-    onLogOut: () -> Unit
+    onLogOut: () -> Unit,
+    inventoryViewModel: InventoryViewModel = viewModel(),
+    shoppingListViewModel: ShoppingListViewModel = viewModel()
 ) {
     val scrollState = rememberScrollState()
+    val context = LocalContext.current
+    val currentUser = FirebaseAuth.getInstance().currentUser
+    val db = FirebaseFirestore.getInstance()
+    val inventoryItems by inventoryViewModel.inventoryItems.collectAsState()
+    val shoppingItems by shoppingListViewModel.shoppingItems.collectAsState()
+    var nickname by remember { mutableStateOf(currentUser?.displayName?.takeIf { it.isNotBlank() } ?: "사용자") }
+    var showNicknameDialog by remember { mutableStateOf(false) }
+    var nicknameInput by remember { mutableStateOf(nickname) }
+
+    LaunchedEffect(Unit) {
+        inventoryViewModel.loadInventory()
+        shoppingListViewModel.loadShoppingItems(
+            context = context,
+            includeAutoRecommendations = false
+        )
+    }
+
+    DisposableEffect(currentUser?.uid) {
+        val uid = currentUser?.uid
+        if (uid == null) {
+            onDispose { }
+        } else {
+            val listener = db.collection("user_profiles")
+                .document(uid)
+                .addSnapshotListener { snapshot, _ ->
+                    val savedNickname = snapshot?.getString("nickname")
+                    nickname = savedNickname?.takeIf { it.isNotBlank() }
+                        ?: currentUser.displayName?.takeIf { it.isNotBlank() }
+                        ?: "사용자"
+                    if (!showNicknameDialog) {
+                        nicknameInput = nickname
+                    }
+                }
+
+            onDispose {
+                listener.remove()
+            }
+        }
+    }
+
+    val nowMillis = System.currentTimeMillis()
+    val threeDaysMillis = 3L * 24 * 60 * 60 * 1000
+    val expiringFoodCount = inventoryItems.count { item ->
+        val expireMillis = item.expireDate?.toDate()?.time ?: return@count false
+        expireMillis in nowMillis..(nowMillis + threeDaysMillis)
+    }
+
+    val userProfile = UserProfile(
+        name = nickname,
+        email = currentUser?.email?.takeIf { it.isNotBlank() } ?: "이메일 없음",
+        registeredFoodCount = inventoryItems.size,
+        shoppingListCount = shoppingItems.size,
+        expiringFoodCount = expiringFoodCount
+    )
 
     Column(
         modifier = Modifier
@@ -53,7 +113,13 @@ fun ProfileScreen(
             .padding(bottom = 80.dp)
     ) {
         // 1. 맨 위 초록색 프로필 영역
-        ProfileHeaderSection(userProfile)
+        ProfileHeaderSection(
+            user = userProfile,
+            onEditNickname = {
+                nicknameInput = nickname
+                showNicknameDialog = true
+            }
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -76,17 +142,86 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 3. 에코 챔피언 영역
-        EcoChampionSection()
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // 4. 로그아웃 버튼
+        // 3. 로그아웃 버튼
         LogoutButton(
             onLogOut=onLogOut
         )
 
         Spacer(modifier = Modifier.height(32.dp))
+    }
+
+    if (showNicknameDialog) {
+        AlertDialog(
+            onDismissRequest = { showNicknameDialog = false },
+            title = { Text("닉네임 설정", fontWeight = FontWeight.Bold) },
+            text = {
+                OutlinedTextField(
+                    value = nicknameInput,
+                    onValueChange = { nicknameInput = it },
+                    label = { Text("닉네임") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val uid = currentUser?.uid
+                        val newNickname = nicknameInput.trim()
+                        when {
+                            uid == null -> {
+                                Toast.makeText(context, "로그인이 필요합니다.", Toast.LENGTH_SHORT).show()
+                            }
+
+                            newNickname.isBlank() -> {
+                                Toast.makeText(context, "닉네임을 입력해주세요.", Toast.LENGTH_SHORT).show()
+                            }
+
+                            else -> {
+                            nickname = newNickname
+                            showNicknameDialog = false
+
+                            db.collection("user_profiles")
+                                .document(uid)
+                                .set(
+                                    mapOf(
+                                        "nickname" to newNickname,
+                                        "email" to (currentUser.email ?: ""),
+                                        "displayName" to (currentUser.displayName ?: "")
+                                    ),
+                                    SetOptions.merge()
+                                )
+                                .addOnSuccessListener {
+                                    Toast.makeText(context, "닉네임이 저장되었습니다.", Toast.LENGTH_SHORT).show()
+                                    db.collection("recipes")
+                                        .whereEqualTo("authorId", uid)
+                                        .get()
+                                        .addOnSuccessListener { snapshot ->
+                                            snapshot.documents.forEach { document ->
+                                                document.reference.update("authorNickname", newNickname)
+                                            }
+                                        }
+                                }
+                                .addOnFailureListener { e ->
+                                    Toast.makeText(
+                                        context,
+                                        "닉네임 저장 권한이 없습니다. Firestore Rules에 user_profiles 권한을 추가해주세요.",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                            }
+                        }
+                    }
+                ) {
+                    Text("저장")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showNicknameDialog = false }) {
+                    Text("취소")
+                }
+            }
+        )
     }
 }
 
@@ -94,10 +229,10 @@ fun ProfileScreen(
 // --- 아래부터는 ProfileScreen을 그리기 위한 부품들입니다 ---
 
 @Composable
-private fun ProfileHeaderSection(user: UserProfile) {
-    // 돈 단위를 ₩45,000 처럼 콤마 찍어주는 기능
-    val moneyFormat = DecimalFormat("#,###")
-
+private fun ProfileHeaderSection(
+    user: UserProfile,
+    onEditNickname: () -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -125,10 +260,17 @@ private fun ProfileHeaderSection(user: UserProfile) {
                             Icon(Icons.Default.Person, contentDescription = null, tint = Color(0xFF4A346C), modifier = Modifier.size(36.dp))
                         }
                         Spacer(modifier = Modifier.width(16.dp))
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             // 전달받은 user 데이터 사용
                             Text(user.name, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                             Text(user.email, color = Color.White, fontSize = 14.sp)
+                        }
+                        IconButton(onClick = onEditNickname) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "닉네임 수정",
+                                tint = Color.White
+                            )
                         }
                     }
 
@@ -137,8 +279,8 @@ private fun ProfileHeaderSection(user: UserProfile) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         // 전달받은 user 데이터 사용
                         StatItem("📦", "${user.registeredFoodCount}", "등록한 식품")
-                        StatItem("💰", "₩${moneyFormat.format(user.savedMoney)}", "절약한 비용")
-                        StatItem("♻️", "${user.preventedWasteKg}kg", "방지한 낭비")
+                        StatItem("🛒", "${user.shoppingListCount}", "장보기 리스트")
+                        StatItem("⏰", "${user.expiringFoodCount}", "곧 만료")
                     }
                 }
             }
@@ -152,52 +294,6 @@ private fun StatItem(icon: String, value: String, label: String) {
         Text(text = icon, fontSize = 24.sp, modifier = Modifier.padding(bottom = 4.dp))
         Text(text = value, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
         Text(text = label, color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
-    }
-}
-
-@Composable
-private fun EcoChampionSection() {
-    Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F3ED)),
-        shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.cardElevation(0.dp)
-    ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(text = "🏆", fontSize = 24.sp)
-                Spacer(modifier = Modifier.width(8.dp))
-                Column {
-                    Text("이달의 에코 챔피언", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                    Text("음식물 낭비를 줄여주셔서 감사합니다!", fontSize = 13.sp, color = Color.DarkGray)
-                }
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                BadgeItem("🌱", "초보 절약가")
-                BadgeItem("⭐", "레시피 마스터")
-                BadgeItem("🌟", "에코 워리어")
-            }
-        }
-    }
-}
-
-@Composable
-private fun RowScope.BadgeItem(icon: String, title: String) {
-    Card(
-        modifier = Modifier.weight(1f).padding(horizontal = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(2.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(vertical = 12.dp).fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(text = icon, fontSize = 24.sp)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = title, fontSize = 11.sp, color = Color.DarkGray, fontWeight = FontWeight.Medium)
-        }
     }
 }
 

@@ -1,7 +1,9 @@
 package com.example.nurungji.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
@@ -10,12 +12,14 @@ import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.nurungji.ui.components.RecipeImage
 import com.example.nurungji.ui.navigation.Screen
 import com.example.nurungji.ui.viewmodels.RecipeViewModel
 import com.example.nurungji.models.Recipe
@@ -37,7 +41,10 @@ fun RecipeDetailScreen(
 
     val isRecommended = recipe.recommendUids.contains(currentUserId)
     val isScrapped = recipe.scrapUids.contains(currentUserId)
-    val isMyRecipe = (recipe.authorId == currentUserId)
+    val canEditRecipe = recipe.authorId.isBlank() || recipe.authorId == currentUserId
+    val authorName = recipe.authorNickname
+        .takeIf { it.isNotBlank() }
+        ?: recipe.authorId.take(5).ifBlank { "익명" }
 
     Scaffold(
         topBar = {
@@ -52,11 +59,27 @@ fun RecipeDetailScreen(
         containerColor = Color.White
     ) { innerPadding ->
         Column(
-            modifier = Modifier.padding(innerPadding).fillMaxSize().padding(20.dp)
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(20.dp)
         ) {
+            RecipeImage(
+                imageSource = recipe.imageUrl,
+                fallbackImageRes = recipe.imageRes,
+                contentDescription = "레시피 사진",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(220.dp)
+                    .clip(RoundedCornerShape(18.dp))
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             Text(text = recipe.title, fontSize = 24.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(8.dp))
-            Text(text = "작성자: ${recipe.authorId?.take(5) ?: "익명"}...", color = Color.Gray, fontSize = 14.sp)
+            Text(text = "작성자: $authorName", color = Color.Gray, fontSize = 14.sp)
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -84,7 +107,7 @@ fun RecipeDetailScreen(
             }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = Color(0xFFEEEEEE))
-            Text(text = recipe.content, fontSize = 16.sp, lineHeight = 24.sp, modifier = Modifier.weight(1f))
+            Text(text = recipe.content, fontSize = 16.sp, lineHeight = 24.sp)
 
             // 추천 & 스크랩 버튼 영역
             Row(
@@ -119,7 +142,7 @@ fun RecipeDetailScreen(
             }
 
             // 내가 쓴 글일 때만 나타나는 버튼
-            if (isMyRecipe) {
+            if (canEditRecipe) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(top = 24.dp),
                     horizontalArrangement = Arrangement.End
@@ -137,6 +160,8 @@ fun RecipeDetailScreen(
                     ) { Text("삭제") }
                 }
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
         }
 
         if (showDeleteDialog) {
