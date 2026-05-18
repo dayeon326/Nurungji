@@ -139,30 +139,72 @@ class RecipeViewModel : ViewModel() {
     }
 
     // 추천 누르기 / 취소하기 기능
-    fun toggleRecommend(recipeId: String, currentRecommendUids: List<String>) {
-        val uid = auth.currentUser?.uid ?: return // 로그인 안 했으면 무시
+    fun toggleRecommend(context: Context, recipeId: String, currentRecommendUids: List<String>) {
+        val uid = auth.currentUser?.uid
+        if (uid == null) {
+            Toast.makeText(context, "로그인이 필요합니다.", Toast.LENGTH_SHORT).show()
+            return
+        }
         val recipeRef = db.collection("recipes").document(recipeId) // 업데이트할 문서 찾기
 
-        if (currentRecommendUids.contains(uid)) {
+        val isCancel = currentRecommendUids.contains(uid)
+        val updateTask = if (isCancel) {
             // 이미 내 UID가 명단에 있으면 -> 추천 취소 (명단에서 빼기)
             recipeRef.update("recommendUids", FieldValue.arrayRemove(uid))
         } else {
             // 명단에 없으면 -> 추천하기 (명단에 넣기)
             recipeRef.update("recommendUids", FieldValue.arrayUnion(uid))
         }
+
+        updateTask
+            .addOnSuccessListener {
+                Toast.makeText(
+                    context,
+                    if (isCancel) "추천을 취소했습니다." else "추천했습니다.",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            .addOnFailureListener { e ->
+                Toast.makeText(
+                    context,
+                    "추천 실패: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
     }
 
-    fun toggleScrap(recipeId: String, currentScrapUids: List<String>) {
-        val uid = auth.currentUser?.uid ?: return
+    fun toggleScrap(context: Context, recipeId: String, currentScrapUids: List<String>) {
+        val uid = auth.currentUser?.uid
+        if (uid == null) {
+            Toast.makeText(context, "로그인이 필요합니다.", Toast.LENGTH_SHORT).show()
+            return
+        }
         val recipeRef = db.collection("recipes").document(recipeId)
 
-        if (currentScrapUids.contains(uid)) {
+        val isCancel = currentScrapUids.contains(uid)
+        val updateTask = if (isCancel) {
             // 이미 스크랩 명단에 있으면 -> 스크랩 취소 (명단에서 빼기)
             recipeRef.update("scrapUids", FieldValue.arrayRemove(uid))
         } else {
             // 명단에 없으면 -> 스크랩하기 (명단에 넣기)
             recipeRef.update("scrapUids", FieldValue.arrayUnion(uid))
         }
+
+        updateTask
+            .addOnSuccessListener {
+                Toast.makeText(
+                    context,
+                    if (isCancel) "스크랩을 취소했습니다." else "스크랩했습니다.",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            .addOnFailureListener { e ->
+                Toast.makeText(
+                    context,
+                    "스크랩 실패: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
     }
     fun updateRecipe(
         context: Context,

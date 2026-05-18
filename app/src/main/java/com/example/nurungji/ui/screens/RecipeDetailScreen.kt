@@ -115,7 +115,13 @@ fun RecipeDetailScreen(
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 Button(
-                    onClick = { recipeViewModel.toggleRecommend(recipe.id, recipe.recommendUids) },
+                    onClick = {
+                        recipeViewModel.toggleRecommend(
+                            context = context,
+                            recipeId = recipe.id,
+                            currentRecommendUids = recipe.recommendUids
+                        )
+                    },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (isRecommended) Color(0xFFFFEBEE) else Color(0xFFF5F5F5),
                         contentColor = if (isRecommended) Color.Red else Color.Gray
@@ -128,7 +134,13 @@ fun RecipeDetailScreen(
                 }
 
                 Button(
-                    onClick = { recipeViewModel.toggleScrap(recipe.id, recipe.scrapUids) },
+                    onClick = {
+                        recipeViewModel.toggleScrap(
+                            context = context,
+                            recipeId = recipe.id,
+                            currentScrapUids = recipe.scrapUids
+                        )
+                    },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (isScrapped) Color(0xFFFFF3E0) else Color(0xFFF5F5F5),
                         contentColor = if (isScrapped) Color(0xFFFF9800) else Color.Gray

@@ -58,6 +58,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.nurungji.ui.viewmodels.InventoryViewModel
 import com.example.nurungji.ui.navigation.Screen
 import com.example.nurungji.ui.theme.PrimaryGreenDark
+import com.example.nurungji.utils.classifyFoodCategory
+import com.example.nurungji.utils.estimateExpirationDateText
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -80,7 +82,7 @@ fun AddItemScreen(
     var showDatePicker by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    val categories = listOf("채소", "육류", "유제품", "과일", "음료", "냉동식품", "기타")
+    val categories = listOf("육류", "유제품", "채소", "과일", "음료", "냉동식품", "기타")
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -184,8 +186,15 @@ fun AddItemScreen(
 
                 OutlinedTextField(
                     value = name,
-                    onValueChange = {
-                        name = it
+                    onValueChange = { newName ->
+                        val suggestedCategory = classifyFoodCategory(newName)
+                        name = newName
+                        category = suggestedCategory
+                        expirationDateText = if (newName.isBlank()) {
+                            ""
+                        } else {
+                            estimateExpirationDateText(newName, suggestedCategory)
+                        }
                         errorMessage = null
                     },
                     label = { Text("식품명") },
@@ -224,6 +233,9 @@ fun AddItemScreen(
                                 text = { Text(item) },
                                 onClick = {
                                     category = item
+                                    if (name.isNotBlank()) {
+                                        expirationDateText = estimateExpirationDateText(name, item)
+                                    }
                                     categoryExpanded = false
                                     errorMessage = null
                                 }

@@ -58,6 +58,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.nurungji.ui.navigation.Screen
 import com.example.nurungji.ui.viewmodels.InventoryViewModel
 import com.example.nurungji.ui.viewmodels.ReceiptInventoryItem
+import com.example.nurungji.utils.classifyFoodCategory
+import com.example.nurungji.utils.estimateExpirationDateText
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions
@@ -87,7 +89,7 @@ fun ReceiptScanScreen(
         TextRecognition.getClient(KoreanTextRecognizerOptions.Builder().build())
     }
 
-    val categories = listOf("채소", "육류", "유제품", "과일", "음료", "냉동식품", "기타")
+    val categories = listOf("육류", "유제품", "채소", "과일", "음료", "냉동식품", "기타")
 
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -147,11 +149,12 @@ fun ReceiptScanScreen(
                                 editableItems.clear()
                                 editableItems.addAll(
                                     extracted.map {
+                                        val category = classifyFoodCategory(it)
                                         ReceiptEditableItem(
                                             itemName = it,
-                                            category = "기타",
+                                            category = category,
                                             quantity = "1",
-                                            expirationDateText = ""
+                                            expirationDateText = estimateExpirationDateText(it, category)
                                         )
                                     }
                                 )
@@ -304,7 +307,20 @@ private fun ReceiptEditableItemCard(
 
             OutlinedTextField(
                 value = item.itemName,
-                onValueChange = { onItemChange(item.copy(itemName = it)) },
+                onValueChange = { newName ->
+                    val suggestedCategory = classifyFoodCategory(newName)
+                    onItemChange(
+                        item.copy(
+                            itemName = newName,
+                            category = suggestedCategory,
+                            expirationDateText = if (newName.isBlank()) {
+                                ""
+                            } else {
+                                estimateExpirationDateText(newName, suggestedCategory)
+                            }
+                        )
+                    )
+                },
                 label = { Text("식품명") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
@@ -355,7 +371,16 @@ private fun ReceiptEditableItemCard(
                             DropdownMenuItem(
                                 text = { Text(category) },
                                 onClick = {
-                                    onItemChange(item.copy(category = category))
+                                    onItemChange(
+                                        item.copy(
+                                            category = category,
+                                            expirationDateText = if (item.itemName.isBlank()) {
+                                                item.expirationDateText
+                                            } else {
+                                                estimateExpirationDateText(item.itemName, category)
+                                            }
+                                        )
+                                    )
                                     categoryExpanded = false
                                 }
                             )
@@ -440,36 +465,57 @@ private fun extractReceiptItems(text: String): List<String> {
     val excludeKeywords = listOf(
         "합계", "총액", "금액", "할인", "카드", "신용카드", "부가세", "공급가액",
         "결제", "승인", "매출전표", "고객", "영수증", "거스름", "잔액", "수량", "단가",
-        "과세", "면세", "봉사료", "판매총액", "받을금액", "결제수단", "할인내역"
+        "과세", "면세", "봉사료", "판매총액", "받을금액", "결제수단", "할인내역",
+        "사업자", "대표", "주소", "전화", "TEL", "Tel", "tel", "마트", "매장",
+        "점포", "포인트", "적립", "쿠폰", "교환", "환불", "문의", "계산원",
+        "일시", "거래", "바코드", "품목", "상품명", "단위", "공급", "합산"
     )
 
-    val cleaned = text.lines()
+    val lines = text.lines()
         .map { it.trim() }
         .filter { it.isNotBlank() }
-        .filter { line ->
-            excludeKeywords.none { keyword -> line.contains(keyword) }
-        }
-        .filterNot { line ->
-            line.matches(Regex("^[0-9,.:\\- ]+$"))
-        }
-        .filterNot { line ->
-            line.length <= 1
-        }
 
     val items = mutableListOf<String>()
 
-    for (line in cleaned) {
-        val candidate = line
-            .replace(Regex("^\\d+\\s*"), "")
-            .replace(Regex("\\d+[개입봉캔병장]*"), "")
-            .replace(Regex("[0-9,]+"), "")
-            .replace(":", "")
+    for (index in lines.indices) {
+        val line = lines[index]
+        val nextLine = lines.getOrNull(index + 1).orEmpty()
+
+        if (excludeKeywords.any { keyword -> line.contains(keyword) }) continue
+        if (line.matches(Regex("^[0-9,.:\\- /()]+$"))) continue
+        if (line.contains(Regex("\\d{2,4}[./-]\\d{1,2}[./-]\\d{1,2}"))) continue
+        if (line.contains(Regex("\\d{2,3}-\\d{3,4}-\\d{4}"))) continue
+
+        val hasPriceInLine = line.contains(Regex("\\d{3,}(,\\d{3})*"))
+        val nextLineLooksLikePrice = nextLine.matches(Regex("^[0-9, ]{3,}원?$"))
+
+        var candidate = line
+            .replace(Regex("\\([^)]*\\)"), " ")
+            .replace(Regex("^\\d+\\s*"), " ")
+            .replace(Regex("\\s+[0-9,]{3,}\\s*원?$"), " ")
+            .replace(Regex("[0-9,]+\\s*원"), " ")
+            .replace(Regex("\\d+[.]\\d+"), " ")
+            .replace(Regex("\\d+[개입봉캔병장팩kgKgGmlML]+"), " ")
+            .replace(Regex("[*#●■□▶▷ㆍ·]"), " ")
+            .replace(":", " ")
+            .replace(Regex("\\s+"), " ")
             .trim()
 
+        candidate = candidate
+            .replace(Regex("^[가-힣A-Za-z]?\\s"), "")
+            .trim()
+
+        val hasName = candidate.contains(Regex("[가-힣A-Za-z]"))
+        val knownFoodCategory = classifyFoodCategory(candidate)
+        val likelyProductLine = hasPriceInLine || nextLineLooksLikePrice || knownFoodCategory != "기타"
+
         if (
-            candidate.length >= 2 &&
+            likelyProductLine &&
+            hasName &&
+            candidate.length in 2..24 &&
             excludeKeywords.none { candidate.contains(it) } &&
-            !candidate.matches(Regex("^[ㄱ-ㅎㅏ-ㅣ]+$"))
+            !candidate.matches(Regex("^[ㄱ-ㅎㅏ-ㅣ]+$")) &&
+            !candidate.matches(Regex("^[A-Za-z]{1,3}$"))
         ) {
             items.add(candidate)
         }
