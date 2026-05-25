@@ -45,6 +45,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
@@ -58,11 +59,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.nurungji.ui.navigation.Screen
 import com.example.nurungji.ui.viewmodels.InventoryViewModel
 import com.example.nurungji.ui.viewmodels.ReceiptInventoryItem
+import com.example.nurungji.utils.classifyFoodCategoriesWithApi
 import com.example.nurungji.utils.classifyFoodCategory
 import com.example.nurungji.utils.estimateExpirationDateText
+import com.example.nurungji.utils.inventoryCategories
+import com.google.firebase.functions.FirebaseFunctions
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions
+import kotlinx.coroutines.launch
 
 data class ReceiptEditableItem(
     val itemName: String = "",
@@ -84,12 +89,16 @@ fun ReceiptScanScreen(
     var imageBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var isExtracting by remember { mutableStateOf(false) }
     val editableItems = remember { mutableStateListOf<ReceiptEditableItem>() }
+    val scope = rememberCoroutineScope()
+    val functions = remember {
+        FirebaseFunctions.getInstance("asia-northeast3")
+    }
 
     val recognizer = remember {
         TextRecognition.getClient(KoreanTextRecognizerOptions.Builder().build())
     }
 
-    val categories = listOf("육류", "유제품", "채소", "과일", "음료", "냉동식품", "기타")
+    val categories = inventoryCategories
 
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -146,19 +155,26 @@ fun ReceiptScanScreen(
                         recognizer.process(image)
                             .addOnSuccessListener { visionText ->
                                 val extracted = extractReceiptItems(visionText.text)
-                                editableItems.clear()
-                                editableItems.addAll(
-                                    extracted.map {
-                                        val category = classifyFoodCategory(it)
-                                        ReceiptEditableItem(
-                                            itemName = it,
-                                            category = category,
-                                            quantity = "1",
-                                            expirationDateText = estimateExpirationDateText(it, category)
-                                        )
-                                    }
-                                )
-                                isExtracting = false
+                                scope.launch {
+                                    val apiCategories = runCatching {
+                                        classifyFoodCategoriesWithApi(functions, extracted)
+                                    }.getOrDefault(emptyMap())
+
+                                    editableItems.clear()
+                                    editableItems.addAll(
+                                        extracted.map {
+                                            val category = apiCategories[it]
+                                                ?: classifyFoodCategory(it)
+                                            ReceiptEditableItem(
+                                                itemName = it,
+                                                category = category,
+                                                quantity = "",
+                                                expirationDateText = estimateExpirationDateText(it, category)
+                                            )
+                                        }
+                                    )
+                                    isExtracting = false
+                                }
                             }
                             .addOnFailureListener {
                                 editableItems.clear()
@@ -397,6 +413,7 @@ private fun ReceiptEditableItemCard(
                     }
                 },
                 label = { Text("수량") },
+                placeholder = { Text("예: 1") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )

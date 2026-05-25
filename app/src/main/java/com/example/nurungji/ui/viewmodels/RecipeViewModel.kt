@@ -69,12 +69,13 @@ class RecipeViewModel : ViewModel() {
         ingredients: List<String>,
         hashtags: List<String>,
         imageUri: Uri?,
+        inlineImageUris: List<Uri>,
         onSuccess: () -> Unit
     ) {
         val currentUserUid = auth.currentUser?.uid
         val fallbackNickname = auth.currentUser?.displayName?.takeIf { it.isNotBlank() } ?: "익명"
 
-        val saveRecipe: (String, String) -> Unit = { imageUrl, authorNickname ->
+        val saveRecipe: (String, List<String>, String) -> Unit = { imageUrl, inlineImageUrls, authorNickname ->
             val newRecipe = hashMapOf(
             "title" to title,
             "name" to title, // RecipeCard에서 사용
@@ -85,6 +86,7 @@ class RecipeViewModel : ViewModel() {
             "authorId" to currentUserUid,
             "authorNickname" to authorNickname,
             "imageUrl" to imageUrl,
+            "inlineImageUrls" to inlineImageUrls,
             "createdAt" to FieldValue.serverTimestamp(),
             "updatedAt" to FieldValue.serverTimestamp(),
             "recommendUids" to emptyList<String>(),
@@ -106,7 +108,18 @@ class RecipeViewModel : ViewModel() {
             prepareRecipeImage(
                 context = context,
                 imageUri = imageUri,
-                onSuccess = { imageUrl -> saveRecipe(imageUrl, authorNickname) },
+                onSuccess = { imageUrl ->
+                    prepareRecipeImages(
+                        context = context,
+                        imageUris = inlineImageUris,
+                        onSuccess = { inlineImageUrls ->
+                            saveRecipe(imageUrl, inlineImageUrls, authorNickname)
+                        },
+                        onFailure = { e ->
+                            Toast.makeText(context, "본문 사진 처리 실패: ${e.message}", Toast.LENGTH_LONG).show()
+                        }
+                    )
+                },
                 onFailure = { e ->
                     Toast.makeText(context, "사진 처리 실패: ${e.message}", Toast.LENGTH_LONG).show()
                 }
@@ -216,9 +229,11 @@ class RecipeViewModel : ViewModel() {
         hashtags: List<String>,
         imageUri: Uri?,
         currentImageUrl: String,
+        currentInlineImageUrls: List<String>,
+        newInlineImageUris: List<Uri>,
         onSuccess: () -> Unit
     ) {
-        val updateRecipe: (String) -> Unit = { imageUrl ->
+        val updateRecipe: (String, List<String>) -> Unit = { imageUrl, inlineImageUrls ->
             db.collection("recipes").document(recipeId)
                 .update(
                     mapOf(
@@ -229,6 +244,7 @@ class RecipeViewModel : ViewModel() {
                         "ingredients" to ingredients,
                         "hashtags" to hashtags,
                         "imageUrl" to imageUrl,
+                        "inlineImageUrls" to inlineImageUrls,
                         "updatedAt" to FieldValue.serverTimestamp()
                     )
                 )
@@ -241,13 +257,26 @@ class RecipeViewModel : ViewModel() {
                 }
         }
 
+        val prepareInlineImages: (String) -> Unit = { imageUrl ->
+            prepareRecipeImages(
+                context = context,
+                imageUris = newInlineImageUris,
+                onSuccess = { newInlineImageUrls ->
+                    updateRecipe(imageUrl, currentInlineImageUrls + newInlineImageUrls)
+                },
+                onFailure = { e ->
+                    Toast.makeText(context, "본문 사진 처리 실패: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            )
+        }
+
         if (imageUri == null) {
-            updateRecipe(currentImageUrl)
+            prepareInlineImages(currentImageUrl)
         } else {
             prepareRecipeImage(
                 context = context,
                 imageUri = imageUri,
-                onSuccess = updateRecipe,
+                onSuccess = prepareInlineImages,
                 onFailure = { e ->
                     Toast.makeText(context, "사진 처리 실패: ${e.message}", Toast.LENGTH_LONG).show()
                 }
@@ -268,17 +297,7 @@ class RecipeViewModel : ViewModel() {
 
         Thread {
             try {
-                val bytes = context.contentResolver.openInputStream(imageUri)?.use { it.readBytes() }
-                    ?: throw IllegalArgumentException("사진 파일을 읽을 수 없습니다.")
-                val originalBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                    ?: throw IllegalArgumentException("사진 형식을 읽을 수 없습니다.")
-
-                val resizedBitmap = resizeBitmap(originalBitmap, maxSize = 700)
-                val output = ByteArrayOutputStream()
-                resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 70, output)
-                val encodedImage = Base64.encodeToString(output.toByteArray(), Base64.NO_WRAP)
-                val imageData = "data:image/jpeg;base64,$encodedImage"
-
+                val imageData = encodeRecipeImage(context, imageUri)
                 Handler(Looper.getMainLooper()).post {
                     onSuccess(imageData)
                 }
@@ -288,6 +307,47 @@ class RecipeViewModel : ViewModel() {
                 }
             }
         }.start()
+    }
+
+    private fun prepareRecipeImages(
+        context: Context,
+        imageUris: List<Uri>,
+        onSuccess: (List<String>) -> Unit,
+        onFailure: (Exception) -> Unit
+    ) {
+        if (imageUris.isEmpty()) {
+            onSuccess(emptyList())
+            return
+        }
+
+        Thread {
+            try {
+                val imageUrls = imageUris.map { uri ->
+                    encodeRecipeImage(context, uri)
+                }
+
+                Handler(Looper.getMainLooper()).post {
+                    onSuccess(imageUrls)
+                }
+            } catch (e: Exception) {
+                Handler(Looper.getMainLooper()).post {
+                    onFailure(e)
+                }
+            }
+        }.start()
+    }
+
+    private fun encodeRecipeImage(context: Context, imageUri: Uri): String {
+        val bytes = context.contentResolver.openInputStream(imageUri)?.use { it.readBytes() }
+            ?: throw IllegalArgumentException("사진 파일을 읽을 수 없습니다.")
+        val originalBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            ?: throw IllegalArgumentException("사진 형식을 읽을 수 없습니다.")
+
+        val resizedBitmap = resizeBitmap(originalBitmap, maxSize = 700)
+        val output = ByteArrayOutputStream()
+        resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 70, output)
+        val encodedImage = Base64.encodeToString(output.toByteArray(), Base64.NO_WRAP)
+        return "data:image/jpeg;base64,$encodedImage"
     }
 
     private fun resizeBitmap(bitmap: Bitmap, maxSize: Int): Bitmap {

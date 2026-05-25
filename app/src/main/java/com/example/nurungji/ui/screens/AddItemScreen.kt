@@ -68,13 +68,16 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.nurungji.ui.viewmodels.InventoryViewModel
 import com.example.nurungji.ui.navigation.Screen
 import com.example.nurungji.ui.theme.PrimaryGreenDark
+import com.example.nurungji.utils.classifyFoodCategoriesWithApi
 import com.example.nurungji.utils.classifyFoodCategory
 import com.example.nurungji.utils.estimateExpirationDateText
+import com.example.nurungji.utils.inventoryCategories
 import com.google.firebase.Timestamp
 import com.google.firebase.functions.FirebaseFunctions
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
@@ -93,6 +96,7 @@ fun AddItemScreen(
     var category by remember { mutableStateOf("") }
     var quantity by remember { mutableStateOf("") }
     var expirationDateText by remember { mutableStateOf("") }
+    var categoryEditedManually by remember { mutableStateOf(false) }
 
     var categoryExpanded by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
@@ -102,7 +106,7 @@ fun AddItemScreen(
     var detectedItems by remember { mutableStateOf<List<PhotoFoodInfo>>(emptyList()) }
     val inventoryError by viewModel.errorMessage.collectAsState()
 
-    val categories = listOf("육류", "유제품", "채소", "과일", "음료", "냉동식품", "기타")
+    val categories = inventoryCategories
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -124,11 +128,28 @@ fun AddItemScreen(
         }
     }
 
+    LaunchedEffect(name, categoryEditedManually) {
+        val targetName = name.trim()
+        if (targetName.isBlank() || categoryEditedManually) return@LaunchedEffect
+
+        delay(700)
+
+        runCatching {
+            classifyFoodCategoriesWithApi(functions, listOf(targetName))[targetName]
+        }.getOrNull()?.let { apiCategory ->
+            if (name.trim() == targetName && !categoryEditedManually) {
+                category = apiCategory
+                expirationDateText = estimateExpirationDateText(targetName, apiCategory)
+            }
+        }
+    }
+
     fun applyDetectedFoodInfo(info: PhotoFoodInfo) {
         name = info.itemName
         category = info.category
         quantity = info.quantity
         expirationDateText = info.expirationDateText
+        categoryEditedManually = false
         errorMessage = null
     }
 
@@ -138,6 +159,7 @@ fun AddItemScreen(
         category = ""
         quantity = ""
         expirationDateText = ""
+        categoryEditedManually = false
         errorMessage = null
     }
 
@@ -371,6 +393,7 @@ fun AddItemScreen(
                                 category = ""
                                 quantity = ""
                                 expirationDateText = ""
+                                categoryEditedManually = false
                                 scope.launch {
                                     snackbarHostState.showSnackbar(
                                         message = "식품 ${validItems.size}개가 추가되었습니다",
@@ -390,6 +413,7 @@ fun AddItemScreen(
                         val suggestedCategory = classifyFoodCategory(newName)
                         name = newName
                         category = suggestedCategory
+                        categoryEditedManually = false
                         expirationDateText = if (newName.isBlank()) {
                             ""
                         } else {
@@ -433,6 +457,7 @@ fun AddItemScreen(
                                 text = { Text(item) },
                                 onClick = {
                                     category = item
+                                    categoryEditedManually = true
                                     if (name.isNotBlank()) {
                                         expirationDateText = estimateExpirationDateText(name, item)
                                     }
@@ -453,15 +478,14 @@ fun AddItemScreen(
                         errorMessage = null
                     },
                     label = { Text("수량") },
-                    placeholder = { Text("예: 3") },
+                    placeholder = { Text("예: 1") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
                     singleLine = true,
-                    isError = errorMessage != null && (
-                            quantity.isBlank() ||
-                                    quantity.toLongOrNull() == null ||
-                                    (quantity.toLongOrNull() ?: 0L) <= 0L
-                            )
+                    isError = errorMessage != null &&
+                            quantity.isNotBlank() &&
+                            (quantity.toLongOrNull() == null ||
+                                    (quantity.toLongOrNull() ?: 0L) <= 0L)
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -500,12 +524,11 @@ fun AddItemScreen(
 
                 Button(
                     onClick = {
-                        val quantityLong = quantity.toLongOrNull()
+                        val quantityLong = quantity.ifBlank { "1" }.toLongOrNull()
 
                         errorMessage = when {
                             name.isBlank() -> "식품명을 입력해주세요."
                             category.isBlank() -> "카테고리를 선택해주세요."
-                            quantity.isBlank() -> "수량을 입력해주세요."
                             quantityLong == null -> "수량은 숫자로 입력해주세요."
                             quantityLong <= 0L -> "수량은 1 이상이어야 합니다."
                             expirationDateText.isBlank() -> "유통기한을 선택해주세요."
@@ -526,6 +549,7 @@ fun AddItemScreen(
                             category = ""
                             quantity = ""
                             expirationDateText = ""
+                            categoryEditedManually = false
                             errorMessage = null
 
                             scope.launch {
@@ -781,6 +805,7 @@ private fun DetectedPhotoItemCard(
                     }
                 },
                 label = { Text("수량") },
+                placeholder = { Text("예: 1") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
@@ -949,13 +974,13 @@ private fun Any?.toPhotoFoodInfoOrNull(): PhotoFoodInfo? {
     val map = this as? Map<*, *> ?: return null
     val itemName = map["itemName"] as? String ?: ""
     val category = map["category"] as? String ?: ""
-    val quantity = map["quantity"] as? String ?: "1"
+    val quantity = map["quantity"] as? String ?: ""
     val expirationDateText = map["expirationDateText"] as? String ?: ""
 
     return PhotoFoodInfo(
         itemName = itemName,
         category = category,
-        quantity = quantity.ifBlank { "1" },
+        quantity = quantity,
         expirationDateText = expirationDateText
     )
 }

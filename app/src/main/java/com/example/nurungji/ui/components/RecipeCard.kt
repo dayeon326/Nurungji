@@ -25,6 +25,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.nurungji.ui.viewmodels.ShoppingListViewModel
 import com.example.nurungji.models.Recipe
 import com.example.nurungji.ui.theme.*
+import com.example.nurungji.utils.recipePreviewText
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -87,7 +88,7 @@ fun RecipeCard(
                     Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
-                        text = recipe.content,
+                        text = recipePreviewText(recipe.content),
                         color = TextSecondary,
                         fontSize = 13.sp,
                         lineHeight = 19.sp,

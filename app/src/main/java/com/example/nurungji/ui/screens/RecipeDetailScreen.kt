@@ -107,7 +107,7 @@ fun RecipeDetailScreen(
             }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = Color(0xFFEEEEEE))
-            Text(text = recipe.content, fontSize = 16.sp, lineHeight = 24.sp)
+            RecipeBodyContent(recipe = recipe)
 
             // 추천 & 스크랩 버튼 영역
             Row(
@@ -203,6 +203,48 @@ fun RecipeDetailScreen(
                     }
                 }
             )
+        }
+    }
+}
+
+@Composable
+private fun RecipeBodyContent(recipe: Recipe) {
+    val imageMarkerRegex = Regex("\\[\\[image:(\\d+)]]")
+    var lastIndex = 0
+    val matches = imageMarkerRegex.findAll(recipe.content).toList()
+
+    if (matches.isEmpty()) {
+        Text(text = recipe.content, fontSize = 16.sp, lineHeight = 24.sp)
+        return
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        matches.forEach { match ->
+            val textPart = recipe.content.substring(lastIndex, match.range.first).trim()
+            if (textPart.isNotBlank()) {
+                Text(text = textPart, fontSize = 16.sp, lineHeight = 24.sp)
+            }
+
+            val imageIndex = match.groupValues.getOrNull(1)?.toIntOrNull()
+            val imageUrl = imageIndex?.let { recipe.inlineImageUrls.getOrNull(it) }
+            if (!imageUrl.isNullOrBlank()) {
+                RecipeImage(
+                    imageSource = imageUrl,
+                    fallbackImageRes = android.R.drawable.ic_menu_gallery,
+                    contentDescription = "요리 방법 사진",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(220.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                )
+            }
+
+            lastIndex = match.range.last + 1
+        }
+
+        val remainingText = recipe.content.substring(lastIndex).trim()
+        if (remainingText.isNotBlank()) {
+            Text(text = remainingText, fontSize = 16.sp, lineHeight = 24.sp)
         }
     }
 }

@@ -34,11 +34,17 @@ private fun estimateExpirationDays(itemName: String, category: String): Int {
 
     return when (category) {
         "육류" -> 3
+        "해산물" -> 2
         "유제품" -> 7
         "채소" -> 5
         "과일" -> 7
         "음료" -> 30
         "냉동식품" -> 180
+        "밀키트" -> 3
+        "간편식" -> 5
+        "가공식품" -> 14
+        "곡류" -> 180
+        "조미료" -> 180
         else -> 14
     }
 }

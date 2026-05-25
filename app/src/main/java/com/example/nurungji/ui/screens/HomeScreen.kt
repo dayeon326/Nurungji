@@ -31,10 +31,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.nurungji.data.InventoryItem
@@ -46,7 +50,9 @@ import com.example.nurungji.ui.navigation.Screen
 import com.example.nurungji.ui.theme.PrimaryGreenDark
 import com.example.nurungji.ui.theme.TextSecondary
 import com.example.nurungji.ui.viewmodels.RecipeViewModel
-import java.util.Calendar
+import com.example.nurungji.utils.generateFoodStorageTipWithApi
+import com.google.firebase.functions.FirebaseFunctions
+import java.time.LocalDate
 
 @Composable
 fun HomeScreen(
@@ -261,7 +267,7 @@ fun ShoppingSection(
     onNavigate: (Screen) -> Unit
 ) {
     val subtitle = when {
-        expiringCount > 0 -> "곧 만료 식품 ${expiringCount}개 확인해보세요"
+        expiringCount > 0 -> "장보기 리스트를 확인해보세요"
         totalCount == 0 -> "아직 등록된 식품이 없어요"
         else -> "현재 등록된 식품 ${totalCount}개"
     }
@@ -364,6 +370,24 @@ fun RecipeSection(
 }
 @Composable
 fun TipSection(inventoryItems: List<InventoryItem>) {
+    var tip by remember { mutableStateOf("오늘의 보관 팁을 준비하고 있어요.") }
+    val context = LocalContext.current
+    val functions = remember {
+        FirebaseFunctions.getInstance("asia-northeast3")
+    }
+    val itemKey = inventoryItems.joinToString("|") {
+        "${it.documentId}:${it.itemName}:${it.category}:${it.expireDate?.seconds}"
+    }
+    val todayKey = LocalDate.now().toString()
+
+    LaunchedEffect(itemKey, todayKey) {
+        tip = runCatching {
+            generateFoodStorageTipWithApi(context, functions, inventoryItems)
+        }.getOrNull()
+            ?.takeIf { it.isNotBlank() }
+            ?: "채소는 물기를 제거한 뒤 밀폐 용기에 보관하면 신선해요."
+    }
+
     Card(
         modifier = Modifier
             .padding(16.dp)
@@ -380,75 +404,10 @@ fun TipSection(inventoryItems: List<InventoryItem>) {
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = buildDailyInventoryTip(inventoryItems),
+                text = tip,
                 style = MaterialTheme.typography.bodyMedium,
                 color = TextSecondary
             )
         }
-    }
-}
-
-private fun buildDailyInventoryTip(inventoryItems: List<InventoryItem>): String {
-    val dayOfYear = Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
-
-    if (inventoryItems.isEmpty()) {
-        val emptyTips = listOf(
-            "채소는 물기를 제거한 뒤 보관하면 더 오래 신선하게 유지돼요.",
-            "육류는 바로 먹지 않을 예정이면 1회분씩 소분해 냉동하는 게 좋아요.",
-            "유제품은 냉장고 문보다 안쪽 선반에 두면 온도 변화가 적어요.",
-            "과일은 차갑게 두었다가 먹으면 더 산뜻하게 즐길 수 있어요."
-        )
-        return emptyTips[dayOfYear % emptyTips.size]
-    }
-
-    val tips = mutableListOf<String>()
-    val sortedItems = inventoryItems.sortedWith(
-        compareBy<InventoryItem> {
-            it.expireDate?.toDate()?.time ?: Long.MAX_VALUE
-        }.thenBy { it.itemName }
-    )
-
-    sortedItems.forEach { item ->
-        tips.addAll(buildItemSpecificTips(item))
-    }
-
-    sortedItems.groupBy { it.category }
-        .maxByOrNull { it.value.size }
-        ?.value
-        ?.firstOrNull()
-        ?.let { item ->
-            tips.add("${item.itemName}는 다른 재료와 함께 간단한 한 끼로 활용하기 좋아요.")
-        }
-
-    tips.addAll(
-        listOf(
-            "${sortedItems.first().itemName}는 간단히 손질해두면 요리할 때 바로 쓰기 좋아요.",
-            "${sortedItems.first().itemName}는 밀폐 용기에 담아두면 향과 식감을 더 잘 지킬 수 있어요.",
-            "${sortedItems.first().itemName}는 오늘 식탁에 곁들이기 좋은 재료예요."
-        )
-    )
-
-    return tips.distinct()[dayOfYear % tips.distinct().size]
-}
-
-private fun buildItemSpecificTips(item: InventoryItem): List<String> {
-    val name = item.itemName.lowercase().replace(" ", "")
-
-    return when {
-        name.contains("토마토") -> listOf("토마토는 덜 익었으면 실온, 익은 뒤에는 냉장 보관이 좋아요.")
-        name.contains("상추") || name.contains("깻잎") -> listOf("${item.itemName}는 키친타월로 감싸 보관하면 숨이 덜 죽어요.")
-        name.contains("버섯") -> listOf("버섯은 물기 없이 종이봉투나 키친타월에 감싸 보관하면 좋아요.")
-        name.contains("양파") || name.contains("감자") -> listOf("${item.itemName}는 통풍이 잘 되는 서늘한 곳에 따로 보관해보세요.")
-        name.contains("바나나") -> listOf("바나나는 꼭지를 감싸두면 갈변을 조금 늦출 수 있어요.")
-        name.contains("우유") -> listOf("우유는 냉장고 문보다 안쪽 선반에 두면 온도 변화가 적어요.")
-        name.contains("치즈") -> listOf("치즈는 밀봉해서 냉장 보관하고, 개봉 후에는 빨리 쓰는 게 좋아요.")
-        name.contains("닭") || name.contains("고기") || name.contains("삼겹살") -> listOf("${item.itemName}는 오래 둘 예정이면 소분해서 냉동해두세요.")
-        item.category == "채소" -> listOf("${item.itemName}는 물기를 제거한 뒤 보관하면 더 오래 신선해요.")
-        item.category == "과일" -> listOf("${item.itemName}는 차갑게 두었다가 먹으면 더 산뜻하게 즐길 수 있어요.")
-        item.category == "육류" -> listOf("${item.itemName}는 사용할 만큼만 소분하고, 오래 보관할 분량은 냉동해두는 게 좋아요.")
-        item.category == "유제품" -> listOf("${item.itemName}는 냉장고 문보다 안쪽 선반에 두면 온도 변화가 적어요.")
-        item.category == "음료" -> listOf("${item.itemName}는 개봉 후에는 냉장 보관하고 가능한 빨리 마시는 게 좋아요.")
-        item.category == "냉동식품" -> listOf("${item.itemName}는 해동 후 재냉동을 피하는 게 좋아요.")
-        else -> listOf("${item.itemName}는 간단히 손질해두면 다음 요리에 바로 활용하기 좋아요.")
     }
 }
