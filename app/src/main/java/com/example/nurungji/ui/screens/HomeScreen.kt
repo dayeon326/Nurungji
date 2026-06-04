@@ -31,10 +31,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.nurungji.data.InventoryItem
@@ -46,6 +50,9 @@ import com.example.nurungji.ui.navigation.Screen
 import com.example.nurungji.ui.theme.PrimaryGreenDark
 import com.example.nurungji.ui.theme.TextSecondary
 import com.example.nurungji.ui.viewmodels.RecipeViewModel
+import com.example.nurungji.utils.generateFoodStorageTipWithApi
+import com.google.firebase.functions.FirebaseFunctions
+import java.time.LocalDate
 
 @Composable
 fun HomeScreen(
@@ -103,7 +110,7 @@ fun HomeScreen(
             onNavigate = onNavigate
         )
 
-        TipSection()
+        TipSection(inventoryItems = inventoryItems)
     }
 }
 
@@ -260,7 +267,7 @@ fun ShoppingSection(
     onNavigate: (Screen) -> Unit
 ) {
     val subtitle = when {
-        expiringCount > 0 -> "곧 만료 식품 ${expiringCount}개 확인해보세요"
+        expiringCount > 0 -> "장보기 리스트를 확인해보세요"
         totalCount == 0 -> "아직 등록된 식품이 없어요"
         else -> "현재 등록된 식품 ${totalCount}개"
     }
@@ -362,7 +369,25 @@ fun RecipeSection(
     }
 }
 @Composable
-fun TipSection() {
+fun TipSection(inventoryItems: List<InventoryItem>) {
+    var tip by remember { mutableStateOf("오늘의 보관 팁을 준비하고 있어요.") }
+    val context = LocalContext.current
+    val functions = remember {
+        FirebaseFunctions.getInstance("asia-northeast3")
+    }
+    val itemKey = inventoryItems.joinToString("|") {
+        "${it.documentId}:${it.itemName}:${it.category}:${it.expireDate?.seconds}"
+    }
+    val todayKey = LocalDate.now().toString()
+
+    LaunchedEffect(itemKey, todayKey) {
+        tip = runCatching {
+            generateFoodStorageTipWithApi(context, functions, inventoryItems)
+        }.getOrNull()
+            ?.takeIf { it.isNotBlank() }
+            ?: "채소는 물기를 제거한 뒤 밀폐 용기에 보관하면 신선해요."
+    }
+
     Card(
         modifier = Modifier
             .padding(16.dp)
@@ -379,7 +404,7 @@ fun TipSection() {
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = "토마토는 실온 보관이 더 좋아요!",
+                text = tip,
                 style = MaterialTheme.typography.bodyMedium,
                 color = TextSecondary
             )

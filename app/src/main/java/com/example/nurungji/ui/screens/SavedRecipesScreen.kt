@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.nurungji.ui.navigation.Screen
 import com.example.nurungji.ui.viewmodels.RecipeViewModel
+import com.example.nurungji.utils.recipePreviewText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,7 +70,7 @@ fun SavedRecipesScreen(
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(text = recipe.title, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                                 Spacer(modifier = Modifier.height(8.dp))
-                                Text(text = recipe.content, color = Color.DarkGray, fontSize = 14.sp, maxLines = 2)
+                                Text(text = recipePreviewText(recipe.content), color = Color.DarkGray, fontSize = 14.sp, maxLines = 2)
                                 Spacer(modifier = Modifier.height(8.dp))
                             }
                         }

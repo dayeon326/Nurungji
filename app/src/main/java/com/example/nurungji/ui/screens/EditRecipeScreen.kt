@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -36,13 +37,23 @@ fun EditRecipeScreen(
     var cookingTime by remember { mutableStateOf(recipe.time.removeSuffix("분")) }
     var ingredients by remember { mutableStateOf(recipe.ingredients.joinToString(", ")) }
     var hashtags by remember { mutableStateOf(recipe.hashtags.joinToString(", ")) }
-    var content by remember { mutableStateOf(recipe.content) }
+    var content by remember { mutableStateOf(TextFieldValue(recipe.content)) }
     var imageUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    val newInlineImageUris = remember { mutableStateListOf<android.net.Uri>() }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
         imageUri = uri
+    }
+    val inlineImagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            val imageIndex = recipe.inlineImageUrls.size + newInlineImageUris.size
+            newInlineImageUris.add(uri)
+            content = content.insertRecipeImageMarker(imageIndex)
+        }
     }
 
     Scaffold(
@@ -99,21 +110,37 @@ fun EditRecipeScreen(
                 modifier = Modifier.fillMaxWidth().height(250.dp)
             )
 
+            OutlinedButton(
+                onClick = { inlineImagePickerLauncher.launch("image/*") },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("요리 방법 중간에 사진 삽입")
+            }
+
+            val inlineImageCount = recipe.inlineImageUrls.size + newInlineImageUris.size
+            if (inlineImageCount > 0) {
+                Text(
+                    text = "본문 사진 ${inlineImageCount}장 삽입됨",
+                    color = Color.Gray,
+                    fontSize = 13.sp
+                )
+            }
+
             RecipeImagePicker(
                 imageModel = imageUri ?: recipe.imageUrl.takeIf { it.isNotBlank() },
-                buttonText = "사진 변경",
+                buttonText = "대표 사진 변경",
                 onPickImage = { imagePickerLauncher.launch("image/*") }
             )
 
             Button(
                 onClick = {
-                    if (title.isNotBlank() && content.isNotBlank() && cookingTime.isNotBlank()) {
+                    if (title.isNotBlank() && content.text.isNotBlank() && cookingTime.isNotBlank()) {
                         // 새로 적은 내용을 뷰모델로 보내서 업데이트
                         recipeViewModel.updateRecipe(
                             context = context,
                             recipeId = recipe.id,
                             title = title,
-                            content = content,
+                            content = content.text,
                             cookingTime = cookingTime,
                             ingredients = ingredients.split(",")
                                 .map { it.trim() }
@@ -122,7 +149,9 @@ fun EditRecipeScreen(
                                 .map { it.trim().removePrefix("#") }
                                 .filter { it.isNotEmpty() },
                             imageUri = imageUri,
-                            currentImageUrl = recipe.imageUrl
+                            currentImageUrl = recipe.imageUrl,
+                            currentInlineImageUrls = recipe.inlineImageUrls,
+                            newInlineImageUris = newInlineImageUris.toList()
                         ) {
                             onBack() // 수정 완료 후 이전 화면으로 돌아가기
                         }

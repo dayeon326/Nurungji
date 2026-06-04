@@ -142,6 +142,41 @@ class InventoryViewModel : ViewModel() {
         }
     }
 
+    fun updateInventory(
+        documentId: String,
+        itemName: String,
+        category: String,
+        quantity: Long,
+        expireDate: Timestamp?
+    ) {
+        viewModelScope.launch {
+            try {
+                val currentUser = auth.currentUser
+                if (currentUser == null) {
+                    _errorMessage.value = "로그인이 필요합니다."
+                    return@launch
+                }
+
+                val data = mapOf(
+                    "itemName" to itemName.trim(),
+                    "category" to category,
+                    "quantity" to quantity,
+                    "expireDate" to expireDate
+                )
+
+                db.collection("inventory")
+                    .document(documentId)
+                    .update(data)
+                    .await()
+
+                loadInventory()
+                _errorMessage.value = null
+            } catch (e: Exception) {
+                _errorMessage.value = e.message
+            }
+        }
+    }
+
     fun addInventoryItemsFromReceipt(items: List<ReceiptInventoryItem>) {
         viewModelScope.launch {
             try {

@@ -23,20 +23,30 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -56,6 +66,7 @@ import com.example.nurungji.ui.viewmodels.InventoryViewModel
 import com.example.nurungji.ui.navigation.Screen
 import com.example.nurungji.ui.theme.PrimaryGreenDark
 import com.example.nurungji.ui.theme.TextSecondary
+import com.example.nurungji.utils.inventoryCategoriesWithAll
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -84,8 +95,9 @@ fun InventoryScreen(
 
     var selectedCategory by remember { mutableStateOf("전체") }
     var searchQuery by remember { mutableStateOf("") }
+    var editingItem by remember { mutableStateOf<InventoryItem?>(null) }
 
-    val categories = listOf("전체", "채소", "육류", "유제품", "과일", "음료", "냉동식품", "기타")
+    val categories = inventoryCategoriesWithAll
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -151,6 +163,9 @@ fun InventoryScreen(
                     items(filteredItems, key = { it.documentId }) { item ->
                         InventoryGridCard(
                             item = item,
+                            onEdit = {
+                                editingItem = item
+                            },
                             onDelete = {
                                 val deletedItem = item
 
@@ -176,6 +191,24 @@ fun InventoryScreen(
                         )
                     }
                 }
+            }
+
+            editingItem?.let { item ->
+                EditInventoryDialog(
+                    item = item,
+                    categories = inventoryCategoriesWithAll.filter { it != "전체" },
+                    onDismiss = { editingItem = null },
+                    onSave = { itemName, category, quantity, expireDate ->
+                        viewModel.updateInventory(
+                            documentId = item.documentId,
+                            itemName = itemName,
+                            category = category,
+                            quantity = quantity,
+                            expireDate = expireDate
+                        )
+                        editingItem = null
+                    }
+                )
             }
         }
     }
@@ -344,6 +377,7 @@ fun EmptyInventoryState(
 @Composable
 fun InventoryGridCard(
     item: InventoryItem,
+    onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     val expireDate = item.expireDate?.toDate()
@@ -351,6 +385,8 @@ fun InventoryGridCard(
     val badgeLabel = dDayText(daysLeft)
     val badgeColor = dDayBackgroundColor(daysLeft)
     val badgeTextColor = dDayTextColor(daysLeft)
+
+    var menuExpanded by remember { mutableStateOf(false) }
 
     Card(
         shape = RoundedCornerShape(24.dp),
@@ -365,19 +401,64 @@ fun InventoryGridCard(
                 .padding(14.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .background(
-                        color = Color(0xFFF0F7F4),
-                        shape = CircleShape
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = getCategoryEmoji(item.category),
-                    style = MaterialTheme.typography.headlineLarge
-                )
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(56.dp)
+                        .background(
+                            color = Color(0xFFF0F7F4),
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = getCategoryEmoji(item.category),
+                        style = MaterialTheme.typography.headlineLarge
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .offset(x = 12.dp, y = (-10).dp)
+                ) {
+                    IconButton(
+                        onClick = { menuExpanded = true },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "재고 메뉴"
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("수정") },
+                            leadingIcon = {
+                                Icon(Icons.Default.Edit, contentDescription = null)
+                            },
+                            onClick = {
+                                menuExpanded = false
+                                onEdit()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("삭제") },
+                            leadingIcon = {
+                                Icon(Icons.Default.Delete, contentDescription = null)
+                            },
+                            onClick = {
+                                menuExpanded = false
+                                onDelete()
+                            }
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -431,24 +512,172 @@ fun InventoryGridCard(
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
+        }
+    }
+}
 
-            Button(
-                onClick = onDelete,
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error
-                ),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "삭제",
-                    modifier = Modifier.size(16.dp)
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun EditInventoryDialog(
+    item: InventoryItem,
+    categories: List<String>,
+    onDismiss: () -> Unit,
+    onSave: (String, String, Long, Timestamp?) -> Unit
+) {
+    var itemName by remember(item.documentId) { mutableStateOf(item.itemName) }
+    var category by remember(item.documentId) { mutableStateOf(item.category.ifBlank { "기타" }) }
+    var quantity by remember(item.documentId) { mutableStateOf(item.quantity.toString()) }
+    var expirationDateText by remember(item.documentId) {
+        mutableStateOf(formatExpireDate(item.expireDate?.toDate()).takeIf { it != "없음" } ?: "")
+    }
+    var categoryExpanded by remember { mutableStateOf(false) }
+    var showDatePicker by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("재고 수정") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(
+                    value = itemName,
+                    onValueChange = {
+                        itemName = it
+                        errorMessage = null
+                    },
+                    label = { Text("식품명") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
                 )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("삭제")
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { categoryExpanded = true }
+                ) {
+                    OutlinedTextField(
+                        value = category,
+                        onValueChange = {},
+                        readOnly = true,
+                        enabled = false,
+                        label = { Text("카테고리") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+
+                    DropdownMenu(
+                        expanded = categoryExpanded,
+                        onDismissRequest = { categoryExpanded = false }
+                    ) {
+                        categories.forEach { categoryOption ->
+                            DropdownMenuItem(
+                                text = { Text(categoryOption) },
+                                onClick = {
+                                    category = categoryOption
+                                    categoryExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                OutlinedTextField(
+                    value = quantity,
+                    onValueChange = { newValue ->
+                        if (newValue.all { it.isDigit() } || newValue.isBlank()) {
+                            quantity = newValue
+                            errorMessage = null
+                        }
+                    },
+                    label = { Text("수량") },
+                    placeholder = { Text("예: 1") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showDatePicker = true }
+                ) {
+                    OutlinedTextField(
+                        value = expirationDateText,
+                        onValueChange = {},
+                        readOnly = true,
+                        enabled = false,
+                        label = { Text("유통기한") },
+                        placeholder = { Text("날짜 선택") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
+
+                errorMessage?.let {
+                    Text(
+                        text = it,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
             }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val quantityLong = quantity.ifBlank { "1" }.toLongOrNull()
+                    errorMessage = when {
+                        itemName.isBlank() -> "식품명을 입력해주세요."
+                        category.isBlank() -> "카테고리를 선택해주세요."
+                        quantityLong == null -> "수량은 숫자로 입력해주세요."
+                        quantityLong <= 0L -> "수량은 1 이상이어야 합니다."
+                        else -> null
+                    }
+
+                    if (errorMessage == null) {
+                        onSave(
+                            itemName.trim(),
+                            category,
+                            quantityLong!!,
+                            parseDateToTimestamp(expirationDateText)
+                        )
+                    }
+                }
+            ) {
+                Text("저장")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("취소")
+            }
+        }
+    )
+
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState()
+
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val millis = datePickerState.selectedDateMillis
+                        if (millis != null) {
+                            expirationDateText = formatMillisToDate(millis)
+                        }
+                        showDatePicker = false
+                    }
+                ) {
+                    Text("확인")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("취소")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
         }
     }
 }
@@ -463,10 +692,16 @@ fun getCategoryEmoji(category: String): String {
     return when (category) {
         "채소" -> "🥦"
         "육류" -> "🥩"
+        "해산물" -> "🐟"
         "유제품" -> "🧀"
         "과일" -> "🍇"
         "음료" -> "🧃"
         "냉동식품" -> "❄️"
+        "밀키트" -> "🍲"
+        "간편식" -> "🍱"
+        "가공식품" -> "🥫"
+        "곡류" -> "🌾"
+        "조미료" -> "🧂"
         else -> "📦"
     }
 }

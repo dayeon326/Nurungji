@@ -16,6 +16,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -32,14 +33,24 @@ fun AddRecipeScreen(
     var cookingTime by remember { mutableStateOf("") }
     var ingredients by remember { mutableStateOf("") }
     var hashtags by remember { mutableStateOf("") }
-    var content by remember { mutableStateOf("") }
+    var content by remember { mutableStateOf(TextFieldValue("")) }
     var imageUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    val inlineImageUris = remember { mutableStateListOf<android.net.Uri>() }
 
     val context = LocalContext.current
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
         imageUri = uri
+    }
+    val inlineImagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            val imageIndex = inlineImageUris.size
+            inlineImageUris.add(uri)
+            content = content.insertRecipeImageMarker(imageIndex)
+        }
     }
 
     Scaffold(
@@ -97,15 +108,30 @@ fun AddRecipeScreen(
                 value = content,
                 onValueChange = { content = it },
                 label = { Text("요리 방법") },
-                placeholder = { Text("재료와 만드는 법을 자유롭게 적어주세요!") },
+                placeholder = { Text("재료와 만드는 법을 자유롭게 적어주세요. 중간 사진은 버튼으로 삽입할 수 있어요.") },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(250.dp)
             )
 
+            OutlinedButton(
+                onClick = { inlineImagePickerLauncher.launch("image/*") },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("요리 방법 중간에 사진 삽입")
+            }
+
+            if (inlineImageUris.isNotEmpty()) {
+                Text(
+                    text = "본문 사진 ${inlineImageUris.size}장 삽입됨",
+                    color = Color.Gray,
+                    fontSize = 13.sp
+                )
+            }
+
             RecipeImagePicker(
                 imageModel = imageUri,
-                buttonText = "갤러리에서 사진 선택",
+                buttonText = "대표 사진 선택",
                 onPickImage = { imagePickerLauncher.launch("image/*") }
             )
 
@@ -113,11 +139,11 @@ fun AddRecipeScreen(
 
             Button(
                 onClick = {
-                    if (title.isNotBlank() && content.isNotBlank() && cookingTime.isNotBlank()) {
+                    if (title.isNotBlank() && content.text.isNotBlank() && cookingTime.isNotBlank()) {
                         recipeViewModel.addRecipe(
                             context = context,
                             title = title,
-                            content = content,
+                            content = content.text,
                             cookingTime = cookingTime,
                             ingredients = ingredients.split(",")
                                 .map { it.trim() }
@@ -126,7 +152,8 @@ fun AddRecipeScreen(
                                 .split(",")
                                 .map { it.trim().removePrefix("#") }
                                 .filter { it.isNotEmpty() },
-                            imageUri = imageUri
+                            imageUri = imageUri,
+                            inlineImageUris = inlineImageUris.toList()
                         ) {
                             onBack()
                         }
@@ -153,6 +180,18 @@ fun AddRecipeScreen(
             }
         }
     }
+}
+
+fun TextFieldValue.insertRecipeImageMarker(imageIndex: Int): TextFieldValue {
+    val marker = "\n[[image:$imageIndex]]\n"
+    val start = selection.start.coerceIn(0, text.length)
+    val end = selection.end.coerceIn(0, text.length)
+    val newText = text.replaceRange(start.coerceAtMost(end), start.coerceAtLeast(end), marker)
+    val cursor = start.coerceAtMost(end) + marker.length
+    return copy(
+        text = newText,
+        selection = androidx.compose.ui.text.TextRange(cursor)
+    )
 }
 
 @Composable

@@ -15,6 +15,7 @@ data class Recipe(
 
     val imageRes: Int = android.R.drawable.ic_menu_gallery,
     val imageUrl: String = "",
+    val inlineImageUrls: List<String> = emptyList(),
 
     val recommendUids: List<String> = emptyList(),
     val scrapUids: List<String> = emptyList(),
